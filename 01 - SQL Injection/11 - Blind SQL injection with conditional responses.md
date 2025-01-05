@@ -100,7 +100,7 @@ Berikut langkah sederhana untuk menyelesaikan lab **"Injeksi SQL buta dengan res
    - Di bagian payload, tambahkan tanda **§** di sekitar variabel atau nilai yang ingin diuji.
    - Contoh:
      ```
-     TrackingId=xyz' AND (SELECT SUBSTRING(password,§1§,§2§) FROM users WHERE username='administrator')='a
+     TrackingId=xyz' AND (SELECT SUBSTRING(password,§1§,1) FROM users WHERE username='administrator')='§a§
      ```
      - **§1§**: Offset posisi karakter dalam password.
      - **§2§**: Karakter yang akan diuji.
