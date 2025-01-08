@@ -1,6 +1,4 @@
 # Blind SQL injection with time delays
-# Penjelasan dan Implementasi Blind SQL Injection dengan Time Delays
-
 ## **Apa itu Blind SQL Injection dengan Time Delays?**
 Blind SQL Injection dengan time delays adalah teknik injeksi SQL yang digunakan untuk memperoleh informasi dari database tanpa mengandalkan respons langsung. Dengan memanfaatkan fungsi waktu, kita dapat menginduksi delay (penundaan) berdasarkan kondisi tertentu untuk menginfokan hasil query.
 
