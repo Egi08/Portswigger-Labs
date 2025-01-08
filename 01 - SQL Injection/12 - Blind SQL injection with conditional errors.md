@@ -76,7 +76,3 @@ Cookie: TrackingId=9HCLCYU9VeK78knn'+AND+(SELECT+CASE+WHEN+((SUBSTR((SELECT+pass
 - **1=1**: Menghasilkan error **500**.
 - **1=2**: Respon normal **200**.
 
-#### **Brute Force Password**
-- Hasil:
-  - Karakter pertama: `0`.
-  - Password lengkap: `01k6j5tbrjpd9lpdk4zs`.
