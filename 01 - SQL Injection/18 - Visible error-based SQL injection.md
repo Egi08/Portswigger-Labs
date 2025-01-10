@@ -123,3 +123,4 @@ Dengan memanfaatkan **error-based SQL injection**, penyerang dapat mengekstrak i
    ```sql
    ' AND CAST((SELECT password FROM users LIMIT 1) AS int)--
    ```
+![image](https://github.com/user-attachments/assets/2cfeaea3-4360-4d59-8c45-4070ae3a2098)
