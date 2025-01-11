@@ -1,4 +1,4 @@
-# Reflected XSS ke dalam atribut dengan tanda kurung sudut yang di-HTML-encode
+# Reflected XSS into attribute with angle brackets HTML-encoded
 
 Lab ini mengandung kerentanan **reflected cross-site scripting (XSS)** pada fungsi pencarian blog di mana tanda kurung sudut di-HTML-encode. Untuk menyelesaikan lab ini, lakukan serangan cross-site scripting yang menyuntikkan sebuah atribut dan memanggil fungsi `alert`.
 
