@@ -1,34 +1,38 @@
 
 # CSRF where token is not tied to user session
 
-This lab's email change functionality is vulnerable to CSRF. It uses tokens to try to prevent CSRF attacks, but they aren't integrated into the site's session handling system.
+Fungsi untuk mengubah email dalam lab ini **rentan terhadap serangan CSRF**. Aplikasi berusaha menggunakan token untuk mencegah serangan CSRF, namun token tersebut **tidak terintegrasi dengan sistem sesi** yang digunakan oleh situs.
 
-To solve the lab, use your exploit server to host an HTML page that uses a CSRF attack to change the viewer's email address.
+**Untuk menyelesaikan lab**, gunakan exploit server Anda untuk menayangkan halaman HTML yang melakukan **serangan CSRF** untuk mengubah alamat email pengunjung.
 
-You have two accounts on the application that you can use to help design your attack. The credentials are as follows:
+Anda memiliki dua akun di aplikasi yang dapat Anda gunakan untuk membantu menyusun serangan:
+```
+Username: wiener
+Password: peter
+```
+```
+Username: carlos
+Password: montoya
+```
 
-wiener:peter
-carlos:montoya
+> **Hint**: Anda tidak dapat mendaftarkan email yang sudah digunakan pengguna lain. Jika Anda mengubah email Anda sendiri saat menguji exploit, pastikan menggunakan alamat yang berbeda untuk exploit akhir yang Anda kirim ke korban.
 
-Hint: You cannot register an email address that is already taken by another user. If you change your own email address while testing your exploit, make sure you use a different email address for the final exploit you deliver to the victim.
+---
 
----------------------------------------------
+### Referensi
+- [Bypassing token validation - PortSwigger](https://portswigger.net/web-security/csrf/bypassing-token-validation)
 
-References: 
-
-- https://portswigger.net/web-security/csrf/bypassing-token-validation
+---
 
 ![img](images/CSRF%20where%20token%20is%20not%20tied%20to%20user%20session/1.png)
 
----------------------------------------------
+---
 
-
-In this case the default POST request to change the email contains a parameter “csrf”. I intercepted and dropped the request sp the CSRF token is not used, but before that I created the CSRF PoC:
+Dalam skenario ini, request **POST** default untuk mengubah email memiliki parameter `csrf`. Saya **mencegat (intercept)** dan **menghapus** request tersebut agar token CSRF tidak digunakan. Namun sebelum itu, saya membuat **CSRF PoC**:
 
 ![img](images/CSRF%20where%20token%20is%20not%20tied%20to%20user%20session/2.png)
 
-
-Clicking "Engagement tools" > "Generate CSRF PoC", it generates an HTML PoC:
+Ketika menekan "Engagement tools" > "Generate CSRF PoC" di Burp Suite, didapatkan PoC HTML berikut:
 
 ```
 <html>
@@ -46,3 +50,14 @@ Clicking "Engagement tools" > "Generate CSRF PoC", it generates an HTML PoC:
   </body>
 </html>
 ```
+
+---
+
+## Penjelasan Singkat PoC
+
+- Aplikasi menggunakan parameter `csrf`, tapi **tidak memeriksa** apakah token terkait dengan **sesi pengguna** yang login.  
+- Anda dapat menggunakan **token** milik akun lain (misal, token didapat dari akun wiener), lalu **memberikannya** ke korban (misal, akun carlos) untuk melakukan request pengubahan email.  
+- Browser korban tetap akan **menyertakan cookie sesi** korban, sehingga server menganggap request datang dari korban dan mengubah email mereka.  
+- Dengan `<script>` yang menjalankan `document.forms[0].submit();`, form otomatis dikirim tanpa perlu tindakan manual korban.
+
+**Langkah terakhir**: Unggah HTML PoC ini ke **exploit server** dan berikan link-nya ke korban. Saat korban (yang sedang login) mengunjungi link tersebut, email korban akan berhasil diubah.
