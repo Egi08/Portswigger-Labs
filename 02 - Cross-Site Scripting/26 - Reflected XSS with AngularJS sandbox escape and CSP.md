@@ -60,7 +60,9 @@ Reflected Cross-Site Scripting (XSS) adalah kerentanan keamanan web di mana inpu
 
    - **Gambar Ilustrasi:**
      
-     ![Langkah 3: Mengirimkan Eksploitasi](images/Reflected%20XSS%20with%20AngularJS%20sandbox%20escape%20and%20CSP/2.png)
+     ![Langkah 3: Mengirimkan Eksploitasi]
+     ![image](https://github.com/user-attachments/assets/5b8898fd-7eff-4652-a226-bcbe9c131b92)
+
 
 4. **Memverifikasi Eksekusi Payload**
    
@@ -76,7 +78,9 @@ Reflected Cross-Site Scripting (XSS) adalah kerentanan keamanan web di mana inpu
    
    - **Gambar Ilustrasi:**
      
-     ![Langkah 4: Eksekusi Payload](images/Reflected%20XSS%20with%20AngularJS%20sandbox%20escape%20and%20CSP/3.png)
+     ![Langkah 4: Eksekusi Payload]
+     ![image](https://github.com/user-attachments/assets/d6d9af36-1a1f-4b19-9d42-4911a38708fa)
+
 
 5. **Penjelasan Mengapa Payload Ini Berfungsi**
    
