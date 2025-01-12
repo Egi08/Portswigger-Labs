@@ -1,93 +1,72 @@
-Tentu! Berikut adalah Proof of Concept (PoC) untuk **Reflected XSS yang dilindungi oleh Content Security Policy (CSP)** dengan **bypass CSP**. Saya juga akan menjelaskan setiap bagian dari query tersebut agar Anda memahami mekanismenya.
-
 ---
 
-## **Overview Lab**
+# Reflected XSS Dilindungi oleh CSP, dengan Bypass CSP | Apr 27, 2025
 
-- **Jenis Vulnerabilitas:** Reflected Cross-Site Scripting (XSS)
-- **Proteksi yang Ada:** Content Security Policy (CSP)
-- **Tujuan:** Melakukan XSS dengan mem-bypass CSP dan memanggil fungsi `alert()`
-- **Catatan:** Solusi ini khusus berfungsi di **Chrome**
+## **Pendahuluan**
 
----
+Selamat datang di write-up saya yang lainnya! Dalam lab PortSwigger ini, Anda akan mempelajari: **Reflected XSS yang dilindungi oleh Content Security Policy (CSP), dengan bypass CSP**. Tanpa berlama-lama lagi, mari kita mulai.
 
-## **Langkah-Langkah Solusi**
+**Tingkat Kesulitan secara Keseluruhan untuk Saya (Dari 1-10 bintang):** ★★★☆☆☆☆☆☆☆
 
-### 1. **Memasukkan Payload Awal**
+## **Latar Belakang**
 
-**Input di Kotak Pencarian:**
+Lab ini menggunakan CSP dan mengandung kerentanan Reflected Cross-Site Scripting (XSS).
 
-```html
-<img src=1 onerror=alert(1)>
-```
+Untuk menyelesaikan lab ini, lakukan serangan XSS yang dapat melewati CSP dan memanggil fungsi `alert`.
 
-**Penjelasan:**
-- Payload ini mencoba menyisipkan gambar dengan sumber yang tidak valid (`src=1`), sehingga menghasilkan error yang memicu eksekusi `onerror`, yang menjalankan `alert(1)`.
-- **Namun**, karena CSP aktif, eksekusi skrip ini diblokir.
+Harap dicatat bahwa solusi yang dimaksud untuk lab ini hanya memungkinkan di **Chrome**.
 
-### 2. **Menganalisis Header CSP dengan Burp Proxy**
+## **Eksploitasi**
 
-- **Menggunakan Burp Proxy:** Amati respons HTTP yang mengandung header `Content-Security-Policy`.
-- **Fokus pada:** `report-uri` yang memiliki parameter `token`.
-  
-  Contoh Header CSP:
+### **Halaman Utama:**
 
-  ```
-  Content-Security-Policy: default-src 'self'; report-uri /csp-report?token=abc123
-  ```
+![Halaman Utama](#)
 
-- **Kunci:** Anda dapat mengontrol parameter `token`, yang memungkinkan injeksi direktif CSP tambahan.
+Di sini, kita dapat melihat terdapat kotak pencarian.
 
-### 3. **Menyuntikkan Direktif CSP Tambahan melalui Parameter `token`**
+### **Melakukan Pencarian:**
 
-**URL Target:**
+![Melakukan Pencarian](#)
+
+Seperti yang Anda lihat, input kita direfleksikan kembali ke halaman web.
+
+### **Sejarah HTTP di Burp Suite:**
+
+![Sejarah HTTP Burp Suite](#)
+
+Kita dapat melihat bahwa CSP (Content Security Policy) diaktifkan:
 
 ```
-https://YOUR-LAB-ID.web-security-academy.net/?search=<script>alert(1)</script>&token=;script-src-elem 'unsafe-inline'
+Content-Security-Policy: default-src 'self'; object-src 'none'; script-src 'self'; style-src 'self'; report-uri /csp-report?token=
 ```
 
-**Penjelasan:**
+Perhatikan bahwa `script-src` diatur ke `self`, yang berarti hanya mengizinkan JavaScript dimuat dari origin yang sama dengan halaman itu sendiri.
 
-- **`YOUR-LAB-ID`:** Gantilah dengan ID lab Anda.
-- **Parameter `search`:** Memasukkan payload XSS yang ingin dieksekusi.
-  
-  ```html
-  <script>alert(1)</script>
-  ```
+Namun, kita juga dapat melihat terdapat direktif `report-uri`, yang merefleksikan input ke dalam kebijakan CSP aktual.
 
-- **Parameter `token`:** Menyuntikkan direktif CSP tambahan.
-  
-  ```plaintext
-  ;script-src-elem 'unsafe-inline'
-  ```
+Jika situs merefleksikan parameter yang dapat kita kontrol, kita dapat menyuntikkan titik koma (`;`) untuk menambahkan direktif CSP kita sendiri.
 
-- **Mengapa Ini Berfungsi:**
-  - **`script-src-elem`:** Direktif CSP yang khusus mengatur sumber skrip untuk elemen `<script>`.
-  - **`'unsafe-inline'`:** Mengizinkan eksekusi skrip inline.
-  - Dengan menyuntikkan `;script-src-elem 'unsafe-inline'`, Anda **menimpa** aturan CSP sebelumnya untuk `script-src-elem`, memungkinkan eksekusi skrip inline yang sebelumnya diblokir.
+Biasanya, tidak mungkin untuk menimpa direktif `script-src` yang sudah ada. Namun, Chrome memperkenalkan direktif `script-src-elem`, yang memungkinkan Anda mengontrol elemen skrip, tetapi tidak event. Pentingnya, direktif baru ini memungkinkan Anda untuk menimpa direktif `script-src` yang sudah ada.
 
-### 4. **URL Final PoC**
+Dengan informasi di atas, kita dapat mencoba untuk melewati CSP dengan menyuntikkan kebijakan CSP baru.
+
+### **Payload:**
 
 ```
-https://YOUR-LAB-ID.web-security-academy.net/?search=<script>alert(1)</script>&token=;script-src-elem 'unsafe-inline'
+/?token=;script-src-elem 'unsafe-inline'&search=<script>alert(document.domain)</script>
 ```
 
-**Cara Kerja:**
+**Catatan:** Jika Anda tidak melihat banner yang lengkap, atur `script-src-elem` ke `none`.
 
-1. **Permintaan (Request):**
-   - Browser mengirimkan permintaan dengan parameter `search` berisi payload XSS dan `token` berisi injeksi CSP.
-   
-2. **Respons dari Server:**
-   - Header `Content-Security-Policy` menjadi:
-     
-     ```
-     Content-Security-Policy: default-src 'self'; report-uri /csp-report?token=;script-src-elem 'unsafe-inline'
-     ```
-   
-   - Injeksi `;script-src-elem 'unsafe-inline'` menimpa aturan sebelumnya.
+**Bagus!**
 
-3. **Eksekusi Skrip:**
-   - Dengan `script-src-elem 'unsafe-inline'`, browser mengizinkan eksekusi skrip inline, sehingga payload `<script>alert(1)</script>` berhasil dieksekusi, memunculkan alert.
+## **Apa yang Telah Kita Pelajari:**
+
+- **Reflected XSS** yang dilindungi oleh **CSP**, dengan teknik **bypass CSP**.
+- Pentingnya memahami bagaimana **CSP** bekerja dan bagaimana kebijakan ini dapat dieksploitasi jika ada celah dalam implementasinya.
+- **Chrome** memiliki dukungan khusus yang memungkinkan bypass CSP melalui direktif `script-src-elem`.
+- Pentingnya **validasi dan sanitasi input** yang tepat untuk mencegah serangan XSS.
+- Pentingnya konfigurasi **CSP** yang kuat dan spesifik untuk melindungi aplikasi web dari berbagai jenis serangan skrip.
 
 ---
 
@@ -97,7 +76,7 @@ https://YOUR-LAB-ID.web-security-academy.net/?search=<script>alert(1)</script>&t
 2. **Parameter `token`** disuntikkan dengan direktif CSP tambahan.
 3. **Server** mengembalikan halaman dengan header CSP yang telah dimodifikasi.
 4. **Browser** menerima header CSP baru yang mengizinkan eksekusi skrip inline.
-5. **Skrip** dalam parameter `search` dieksekusi, memicu `alert(1)`.
+5. **Skrip** dalam parameter `search` dieksekusi, memicu `alert(document.domain)`.
 
 ---
 
