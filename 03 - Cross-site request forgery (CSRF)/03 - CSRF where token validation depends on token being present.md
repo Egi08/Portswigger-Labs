@@ -1,34 +1,34 @@
 
 # CSRF where token validation depends on token being present
 
-This lab's email change functionality is vulnerable to CSRF.
+Fitur pengubahan email di lab ini rentan terhadap **serangan CSRF**.
 
-To solve the lab, use your exploit server to host an HTML page that uses a CSRF attack to change the viewer's email address.
+**Untuk menyelesaikan lab**, gunakan exploit server Anda untuk menayangkan sebuah halaman HTML yang melakukan **serangan CSRF** untuk mengganti alamat email pengunjung.
 
-You can log in to your own account using the following credentials: wiener:peter
+Anda dapat login ke akun Anda sendiri dengan kredensial:
+```
+Username: wiener
+Password: peter
+```
 
-Hint: You cannot register an email address that is already taken by another user. If you change your own email address while testing your exploit, make sure you use a different email address for the final exploit you deliver to the victim.
+> **Hint**: Anda tidak dapat mendaftarkan alamat email yang sudah dipakai oleh pengguna lain. Jika Anda mengubah email Anda sendiri saat menguji exploit, pastikan menggunakan alamat yang berbeda saat mengirimkan exploit final ke korban.
 
----------------------------------------------
+---
 
-References: 
+### Referensi
+- [Bypassing token validation - PortSwigger](https://portswigger.net/web-security/csrf/bypassing-token-validation)
 
-- https://portswigger.net/web-security/csrf/bypassing-token-validation
-
-
-
-![img](images/CSRF%20where%20token%20validation%20depends%20on%20token%20being%20present/1.png)
-
----------------------------------------------
-
-In this case the default POST request to change the email contains a parameter “csrf”, but it works if you send only the email and no CSRF token:
-
-
+---
 
 ![img](images/CSRF%20where%20token%20validation%20depends%20on%20token%20being%20present/1.png)
 
+---
 
-Clicking "Engagement tools" > "Generate CSRF PoC", it generates an HTML PoC:
+Dalam kasus ini, **request POST** default untuk mengubah email memiliki parameter `csrf`, namun **ternyata tetap berhasil** jika kita **hanya mengirimkan parameter email** saja **tanpa** token `csrf`:
+
+![img](images/CSRF%20where%20token%20validation%20depends%20on%20token%20being%20present/1.png)
+
+Jika kita mengklik "Engagement tools" > "Generate CSRF PoC" di Burp Suite, akan dihasilkan HTML **PoC** berikut:
 
 ```
 <html>
@@ -45,3 +45,13 @@ Clicking "Engagement tools" > "Generate CSRF PoC", it generates an HTML PoC:
   </body>
 </html>
 ```
+
+---
+
+## Penjelasan Singkat PoC
+- Aplikasi **mengharuskan** token `csrf` hanya jika parameter tersebut **ada**.  
+- Namun jika parameternya **dihapus** sepenuhnya, validasi tidak berjalan, dan **request tetap diproses**.  
+- Dengan menyertakan `<script>` yang memanggil `document.forms[0].submit();`, korban **tidak perlu** menekan tombol apa pun. Begitu halaman terbuka, **request POST** akan otomatis dikirim ke `/my-account/change-email` dengan **parameter email** saja.  
+- Jika korban **masih login**, browser akan **mengirim session cookie** ke server, dan email korban akan berhasil diubah ke `test4@test.com`.
+
+**Langkah terakhir**: Unggah HTML PoC ini ke **exploit server**, lalu berikan link ke korban. Saat korban mengunjungi tautan dan masih login, perubahan email akan terjadi.
