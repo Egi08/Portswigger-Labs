@@ -15,7 +15,9 @@ Reflected Cross-Site Scripting (XSS) adalah jenis kerentanan keamanan web di man
    <link rel="canonical" href="https://example.com/post?postId=1" />
    ```
 
-   Di sini, parameter `postId` direfleksikan ke atribut `href` tanpa memadai sanitasi selain escaping kurung sudut.
+   Di sini, parameter `postId` direfleksikan ke atribut `href` tanpa sanitasi yang memadai selain escaping kurung sudut.
+
+   ![img](images/Reflected%20XSS%20in%20canonical%20link%20tag/1.png)
 
 2. **Menyusun Payload untuk Menyisipkan Atribut Berbahaya**
 
@@ -29,7 +31,9 @@ Reflected Cross-Site Scripting (XSS) adalah jenis kerentanan keamanan web di man
    - `postId=1`: Parameter valid yang diperlukan.
    - `a=b'accesskey='X'onclick='alert(1)`: Menambahkan parameter `a` dengan nilai yang menyisipkan dua atribut baru:
      - `accesskey='X'`: Menambahkan akses pintasan keyboard.
-     - `onclick='alert(1)'`: Menambahkan event handler yang akan menjalankan fungsi `alert(1)` ketika elemen tersebut diklik atau diaktifkan.
+     - `onclick='alert(1)'`: Menambahkan event handler yang akan menjalankan fungsi `alert(1)` ketika elemen tersebut diaktifkan.
+
+   ![img](images/Reflected%20XSS%20in%20canonical%20link%20tag/2.png)
 
 3. **Menggunakan Payload dalam URL**
 
@@ -38,6 +42,8 @@ Reflected Cross-Site Scripting (XSS) adalah jenis kerentanan keamanan web di man
    ```
    https://victim.com/post?postId=1&a=b'accesskey='X'onclick='alert(1)
    ```
+
+   ![img](images/Reflected%20XSS%20in%20canonical%20link%20tag/3.png)
 
 4. **Hasil Akhir pada Tag Canonical**
 
@@ -49,6 +55,8 @@ Reflected Cross-Site Scripting (XSS) adalah jenis kerentanan keamanan web di man
 
    **Catatan:** Meskipun tag `<link>` biasanya tidak responsif terhadap event `onclick`, dalam konteks browser tertentu seperti Chrome, atribut ini dapat dieksekusi melalui kombinasi pintasan keyboard yang disediakan.
 
+   ![img](images/Reflected%20XSS%20in%20canonical%20link%20tag/4.png)
+
 5. **Men-trigger XSS melalui Kombinasi Tombol**
 
    Berdasarkan instruksi, pengguna yang terpengaruh dapat menekan kombinasi tombol berikut untuk menjalankan payload:
@@ -59,6 +67,8 @@ Reflected Cross-Site Scripting (XSS) adalah jenis kerentanan keamanan web di man
 
    Kombinasi tombol ini akan mengaktifkan atribut `accesskey="X"`, yang terhubung dengan event `onclick="alert(1)"`, sehingga menghasilkan popup alert.
 
+   ![img](images/Reflected%20XSS%20in%20canonical%20link%20tag/5.png)
+
 #### **Mengapa Hanya Berfungsi di Chrome?**
 
 Browser berbeda memiliki cara yang berbeda dalam menangani atribut dan event handler pada elemen HTML. Dalam kasus ini, Chrome mungkin memperbolehkan eksekusi event `onclick` pada tag `<link>` melalui kombinasi akses pintasan keyboard tertentu. Browser lain mungkin tidak mengizinkan atau tidak mengeksekusi event tersebut pada elemen yang biasanya tidak interaktif seperti `<link>`.
@@ -66,11 +76,3 @@ Browser berbeda memiliki cara yang berbeda dalam menangani atribut dan event han
 #### **Referensi:**
 - [Cross-Site Scripting (XSS) di Konteks yang Berbeda](https://portswigger.net/web-security/cross-site-scripting/contexts)
 - [Penelitian XSS pada Hidden Input Fields](https://portswigger.net/research/xss-in-hidden-input-fields)
-
-#### **Gambar Ilustrasi**
-
-*Gambar-gambar yang disediakan dalam deskripsi awal akan membantu memahami proses ini secara visual.*
-
----
-
-**Catatan Penting:** Eksploitasi XSS tanpa izin adalah ilegal dan melanggar etika. PoC ini disediakan hanya untuk tujuan edukasi dan membantu dalam memahami serta mencegah kerentanan keamanan.
