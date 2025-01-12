@@ -28,6 +28,8 @@ Dalam kasus ini, **request POST** default untuk mengubah email memiliki paramete
 
 ![img](images/CSRF%20where%20token%20validation%20depends%20on%20token%20being%20present/1.png)
 
+
+note: hilangkan &csrf=EWvzZrstzTyNUyKmmIz5iNzc29kNNQb
 Jika kita mengklik "Engagement tools" > "Generate CSRF PoC" di Burp Suite, akan dihasilkan HTML **PoC** berikut:
 
 ```
