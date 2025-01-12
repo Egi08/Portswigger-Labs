@@ -1,76 +1,75 @@
 
 # Reflected XSS in canonical link tag
 
-This lab reflects user input in a canonical link tag and escapes angle brackets.
+### **Proof of Concept (PoC) Reflected XSS pada Tag Canonical Link**
 
-To solve the lab, perform a cross-site scripting attack on the home page that injects an attribute that calls the alert function.
+#### **Deskripsi Singkat**
+Reflected Cross-Site Scripting (XSS) terjadi ketika aplikasi web merefleksikan input pengguna tanpa validasi yang memadai. Pada kasus ini, input pengguna direfleksikan dalam tag `<link rel="canonical">` dan hanya karakter kurung sudut (`<` dan `>`) yang di-escape. Hal ini memungkinkan penyisipan atribut tambahan yang dapat menjalankan kode JavaScript.
 
-To assist with your exploit, you can assume that the simulated user will press the following key combinations:
+#### **Langkah-langkah PoC**
 
-ALT+SHIFT+X
-CTRL+ALT+X
-Alt+X
+1. **Identifikasi Titik Rentan**
+   
+   Halaman web memungkinkan pengguna untuk mengirim komentar. Input komentar direfleksikan dalam tag `<link rel="canonical">` tanpa sanitasi yang cukup selain escaping kurung sudut.
 
-Please note that the intended solution to this lab is only possible in Chrome.
+   ![img](images/Reflected%20XSS%20in%20canonical%20link%20tag/1.png)
 
----------------------------------------------
+2. **Menyusun Payload**
+   
+   Untuk menyisipkan atribut `accesskey` dan `onclick`, gunakan payload berikut pada parameter tambahan (`a`):
 
-References: 
+   ```
+   /post?postId=1&a=b'accesskey='X'onclick='alert(1)
+   ```
 
-- https://portswigger.net/web-security/cross-site-scripting/contexts
+   **Penjelasan Payload:**
+   - `postId=1`: Parameter valid yang diperlukan.
+   - `a=b'accesskey='X'onclick='alert(1)`: Menambahkan atribut `accesskey` dan `onclick` ke dalam tag `<link>`.
 
-- https://portswigger.net/research/xss-in-hidden-input-fields
+   ![img](images/Reflected%20XSS%20in%20canonical%20link%20tag/2.png)
 
+3. **Menggunakan Payload dalam URL**
+   
+   Masukkan payload ke dalam URL aplikasi web target:
 
+   ```
+   https://victim.com/post?postId=1&a=b'accesskey='X'onclick='alert(1)
+   ```
 
+   ![img](images/Reflected%20XSS%20in%20canonical%20link%20tag/3.png)
 
+4. **Hasil pada Tag Canonical**
+   
+   Setelah payload diproses, tag `<link>` akan menjadi:
 
+   ```html
+   <link rel="canonical" accesskey="X" onclick="alert(1)" href="https://example.com/post?postId=1&a=b'accesskey='X'onclick='alert(1)" />
+   ```
 
+   ![img](images/Reflected%20XSS%20in%20canonical%20link%20tag/4.png)
 
+5. **Men-trigger XSS**
+   
+   Tekan salah satu kombinasi tombol berikut di Chrome untuk menjalankan `alert(1)`:
+   
+   - `ALT+SHIFT+X`
+   - `CTRL+ALT+X`
+   - `Alt+X`
 
-![img](images/Reflected%20XSS%20in%20canonical%20link%20tag/1.png)
-![img](images/Reflected%20XSS%20in%20canonical%20link%20tag/2.png)
-![img](images/Reflected%20XSS%20in%20canonical%20link%20tag/3.png)
+   Kombinasi tombol ini akan mengaktifkan `accesskey="X"`, memicu event `onclick` yang menjalankan `alert(1)`.
 
----------------------------------------------
+   ![img](images/Reflected%20XSS%20in%20canonical%20link%20tag/5.png)
 
-The page allows to post comments:
+#### **Catatan Penting**
+- **Browser Khusus:** Eksploitasi ini hanya berfungsi di Chrome karena cara penanganan atribut dan event handler pada tag `<link>`.
+- **Etika:** Melakukan eksploitasi XSS tanpa izin adalah ilegal dan melanggar etika. PoC ini disediakan hanya untuk tujuan edukasi dan keamanan.
 
+#### **Referensi:**
+- [Cross-Site Scripting (XSS) di Konteks yang Berbeda](https://portswigger.net/web-security/cross-site-scripting/contexts)
+- [Penelitian XSS pada Hidden Input Fields](https://portswigger.net/research/xss-in-hidden-input-fields)
 
-
-![img](images/Reflected%20XSS%20in%20canonical%20link%20tag/4.png)
-
-
-We find the link with 'rel="canonical"' in the head section of the HTML page:
-
-
-
-![img](images/Reflected%20XSS%20in%20canonical%20link%20tag/5.png)
-
-
-We would like to turn it to:
-
-```
-<link rel="canonical" accesskey="X" onclick="alert(1)" />
-```
-
-In the /post endpoint it is necessary to send a correct postId, but it is possible to add more parameters which change the content of the href attribute:
-
-
+---
 
 ![img](images/Reflected%20XSS%20in%20canonical%20link%20tag/6.png)
-
-
-A correct payload:
-
-```
-/post?postId=1&a=b'accesskey='X'onclick='alert(1)
-```
-
-
-
-
-
-
 ![img](images/Reflected%20XSS%20in%20canonical%20link%20tag/7.png)
 ![img](images/Reflected%20XSS%20in%20canonical%20link%20tag/8.png)
