@@ -54,10 +54,14 @@ Reflected Cross-Site Scripting (XSS) adalah jenis kerentanan keamanan web di man
    ```
 
    **Catatan:** Meskipun tag `<link>` biasanya tidak responsif terhadap event `onclick`, dalam konteks browser tertentu seperti Chrome, atribut ini dapat dieksekusi melalui kombinasi pintasan keyboard yang disediakan.
+  ```
+       <img src=x onerror=alert(1)>
+   ```
+
 
    ![img](images/Reflected%20XSS%20in%20canonical%20link%20tag/4.png)
 
-5. **Men-trigger XSS melalui Kombinasi Tombol**
+6. **Men-trigger XSS melalui Kombinasi Tombol**
 
    Berdasarkan instruksi, pengguna yang terpengaruh dapat menekan kombinasi tombol berikut untuk menjalankan payload:
 
