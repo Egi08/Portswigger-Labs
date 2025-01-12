@@ -1,7 +1,5 @@
 ## Cross-site request forgery (CSRF)
 
-**Dalam bagian ini, kami akan menjelaskan apa itu cross-site request forgery**, mendeskripsikan beberapa contoh kerentanan CSRF yang umum, serta **menjelaskan cara mencegah serangan CSRF**.
-
 ---
 
 ### Apa itu CSRF?
