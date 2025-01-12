@@ -1,82 +1,62 @@
 
-# Reflected XSS in canonical link tag
-### **Proof of Concept (PoC) dan Penjelasan Query untuk Reflected XSS pada Tag Canonical Link**
+# Reflected XSS with some SVG markup allowed
 
-#### **Deskripsi Singkat**
-Reflected Cross-Site Scripting (XSS) adalah jenis kerentanan keamanan web di mana input pengguna yang tidak divalidasi dengan baik direfleksikan kembali oleh aplikasi web dalam responsnya. Pada kasus ini, input pengguna direfleksikan dalam tag `<link rel="canonical">` dan hanya karakter kurung sudut (`<` dan `>`) yang di-escape. Hal ini memungkinkan penyerang untuk menyisipkan atribut tambahan yang dapat menjalankan kode JavaScript.
+This lab has a simple reflected XSS vulnerability. The site is blocking common tags but misses some SVG tags and events.
 
-#### **Langkah-langkah PoC**
+To solve the lab, perform a cross-site scripting attack that calls the alert() function.
 
-1. **Memahami Struktur Tag Canonical yang Rentan**
+---------------------------------------------
 
-   Tag canonical pada halaman web biasanya terlihat seperti berikut:
+References: 
 
-   ```html
-   <link rel="canonical" href="https://example.com/post?postId=1" />
-   ```
+- https://portswigger.net/web-security/cross-site-scripting/contexts
 
-   Di sini, parameter `postId` direfleksikan ke atribut `href` tanpa sanitasi yang memadai selain escaping kurung sudut.
+---------------------------------------------
 
-   ![img](images/Reflected%20XSS%20in%20canonical%20link%20tag/1.png)
-
-2. **Menyusun Payload untuk Menyisipkan Atribut Berbahaya**
-
-   Untuk mengeksploitasi kerentanan ini, kita dapat menambahkan parameter tambahan yang akan menyisipkan atribut `accesskey` dan `onclick` ke dalam tag `<link>`. Berikut adalah payload yang digunakan:
-
-   ```
-   /post?postId=1&a=b'accesskey='X'onclick='alert(1)
-   ```
-
-   **Penjelasan Payload:**
-   - `postId=1`: Parameter valid yang diperlukan.
-   - `a=b'accesskey='X'onclick='alert(1)`: Menambahkan parameter `a` dengan nilai yang menyisipkan dua atribut baru:
-     - `accesskey='X'`: Menambahkan akses pintasan keyboard.
-     - `onclick='alert(1)'`: Menambahkan event handler yang akan menjalankan fungsi `alert(1)` ketika elemen tersebut diaktifkan.
-
-   ![img](images/Reflected%20XSS%20in%20canonical%20link%20tag/2.png)
-
-3. **Menggunakan Payload dalam URL**
-
-   Kombinasikan payload tersebut ke dalam URL aplikasi web target. Contohnya:
-
-   ```
-   https://victim.com/post?postId=1&a=b'accesskey='X'onclick='alert(1)
-   ```
-
-   ![img](images/Reflected%20XSS%20in%20canonical%20link%20tag/3.png)
-
-4. **Hasil Akhir pada Tag Canonical**
-
-   Setelah payload diproses oleh aplikasi web, tag `<link>` yang dihasilkan akan menjadi:
-
-   ```html
-   <link rel="canonical" accesskey="X" onclick="alert(1)" href="https://example.com/post?postId=1&a=b'accesskey='X'onclick='alert(1)" />
-   ```
-
-   **Catatan:** Meskipun tag `<link>` biasanya tidak responsif terhadap event `onclick`, dalam konteks browser tertentu seperti Chrome, atribut ini dapat dieksekusi melalui kombinasi pintasan keyboard yang disediakan.
-  ```
-       <img src=x onerror=alert(1)>
-   ```
+The content of the search is reflected inside a h1 HTML element:
 
 
-   ![img](images/Reflected%20XSS%20in%20canonical%20link%20tag/4.png)
 
-6. **Men-trigger XSS melalui Kombinasi Tombol**
+![img](images/Reflected%20XSS%20with%20some%20SVG%20markup%20allowed/1.png)
 
-   Berdasarkan instruksi, pengguna yang terpengaruh dapat menekan kombinasi tombol berikut untuk menjalankan payload:
 
-   - `ALT+SHIFT+X`
-   - `CTRL+ALT+X`
-   - `Alt+X`
+In this case it seems not even custom tags are allowed. I will test all possible tags:
 
-   Kombinasi tombol ini akan mengaktifkan atribut `accesskey="X"`, yang terhubung dengan event `onclick="alert(1)"`, sehingga menghasilkan popup alert.
 
-   ![img](images/Reflected%20XSS%20in%20canonical%20link%20tag/5.png)
 
-#### **Mengapa Hanya Berfungsi di Chrome?**
+![img](images/Reflected%20XSS%20with%20some%20SVG%20markup%20allowed/2.png)
 
-Browser berbeda memiliki cara yang berbeda dalam menangani atribut dan event handler pada elemen HTML. Dalam kasus ini, Chrome mungkin memperbolehkan eksekusi event `onclick` pada tag `<link>` melalui kombinasi akses pintasan keyboard tertentu. Browser lain mungkin tidak mengizinkan atau tidak mengeksekusi event tersebut pada elemen yang biasanya tidak interaktif seperti `<link>`.
 
-#### **Referensi:**
-- [Cross-Site Scripting (XSS) di Konteks yang Berbeda](https://portswigger.net/web-security/cross-site-scripting/contexts)
-- [Penelitian XSS pada Hidden Input Fields](https://portswigger.net/research/xss-in-hidden-input-fields)
+The valid tags are:
+- animatetransform
+- image
+- title
+- svg
+
+
+
+![img](images/Reflected%20XSS%20with%20some%20SVG%20markup%20allowed/3.png)
+
+
+And then all possible attributes:
+- onbegin
+ 
+
+
+![img](images/Reflected%20XSS%20with%20some%20SVG%20markup%20allowed/4.png)
+
+
+We get this payload from https://portswigger.net/web-security/cross-site-scripting/cheat-sheet:
+
+
+
+![img](images/Reflected%20XSS%20with%20some%20SVG%20markup%20allowed/5.png)
+
+
+```
+<svg><animatetransform onbegin=alert(1) attributeName=transform>
+```
+
+
+
+![img](images/Reflected%20XSS%20with%20some%20SVG%20markup%20allowed/6.png)
