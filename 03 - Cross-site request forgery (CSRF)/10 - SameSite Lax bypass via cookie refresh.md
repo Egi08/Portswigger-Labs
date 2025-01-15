@@ -73,7 +73,6 @@ Serangan ini memanfaatkan fakta bahwa aplikasi web tidak memverifikasi asal perm
 - Buka halaman eksploitasi, klik di area yang ditentukan untuk memicu `window.open`, yang akan membuka tab baru dan memperbarui sesi.
 - Setelah sesi diperbarui, formulir CSRF akan secara otomatis dikirimkan setelah waktu yang ditentukan, mengubah email korban menjadi `attacker@evil.com`.
 
-![img](images/SameSite%20Lax%20bypass%20via%20cookie%20refresh/5.png)
 
 ### **4. Menyerahkan Payload ke Korban**
 
