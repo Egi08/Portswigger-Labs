@@ -1,17 +1,16 @@
-
-# SameSite Lax bypass via cookie refresh
+# SameSite Lax Bypass via Cookie Refresh
 
 This lab's change email function is vulnerable to CSRF. To solve the lab, perform a CSRF attack that changes the victim's email address. You should use the provided exploit server to host your attack.
 
-The lab supports OAuth-based login. You can log in via your social media account with the following credentials: wiener:peter
+The lab supports OAuth-based login. You can log in via your social media account with the following credentials: **wiener:peter**
 
-Note: The default SameSite restrictions differ between browsers. As the victim uses Chrome, we recommend also using Chrome (or Burp's built-in Chromium browser) to test your exploit.
+**Note:** The default SameSite restrictions differ between browsers. As the victim uses Chrome, we recommend also using Chrome (or Burp's built-in Chromium browser) to test your exploit.
 
-Hint: You cannot register an email address that is already taken by another user. If you change your own email address while testing your exploit, make sure you use a different email address for the final exploit you deliver to the victim.
+**Hint:** You cannot register an email address that is already taken by another user. If you change your own email address while testing your exploit, make sure you use a different email address for the final exploit you deliver to the victim.
 
 Browsers block popups from being opened unless they are triggered by a manual user interaction, such as a click. The victim user will click on any page you send them to, so you can create popups using a global event handler as follows:
 
-```
+```html
 <script>
     window.onclick = () => {
         window.open('about:blank')
@@ -21,73 +20,73 @@ Browsers block popups from being opened unless they are triggered by a manual us
 
 ---------------------------------------------
 
-References: 
+### References:
 
-- https://portswigger.net/web-security/csrf/bypassing-samesite-restrictions
-
-
-
+- [PortSwigger - Bypassing SameSite Restrictions](https://portswigger.net/web-security/csrf/bypassing-samesite-restrictions)
 
 ![img](images/SameSite%20Lax%20bypass%20via%20cookie%20refresh/1.png)
 
 ---------------------------------------------
 
-There is an update email function:
+## Pemahaman Kerentanan
 
+### **CSRF (Cross-Site Request Forgery):**
+Serangan ini memanfaatkan fakta bahwa aplikasi web tidak memverifikasi asal permintaan yang masuk, sehingga penyerang dapat membuat pengguna yang terautentikasi melakukan tindakan yang tidak diinginkan tanpa sepengetahuan mereka.
 
+### **Kerentanan pada Fungsi Perubahan Email:**
+- **Tidak Ada Token CSRF:** Formulir perubahan email tidak menggunakan token CSRF untuk memverifikasi keaslian permintaan.
+- **SameSite Cookie Attribute Tidak Ditetapkan:** Cookie sesi tidak memiliki atribut `SameSite`, yang berarti browser (dalam kasus ini, Chrome) akan menerapkan kebijakan default `Lax`. Namun, Chrome memberikan pengecualian untuk permintaan POST tingkat atas dalam 120 detik pertama setelah sesi dibuat, memungkinkan serangan CSRF berhasil dalam jangka waktu tersebut.
+
+## Eksploitasi
+
+### **1. Autentikasi sebagai Pengguna**
+
+#### **a. Login ke Aplikasi:**
+- Gunakan kredensial yang diberikan (`wiener:peter`) untuk masuk ke aplikasi menggunakan login berbasis OAuth melalui akun media sosial.
+
+#### **b. Pahami Sesi:**
+- Setelah login, aplikasi akan menetapkan cookie sesi tanpa atribut `SameSite`, memungkinkan potensi serangan CSRF.
 
 ![img](images/SameSite%20Lax%20bypass%20via%20cookie%20refresh/2.png)
 
+### **2. Membangun Payload CSRF**
 
-It is a POST request:
+#### **a. Membuat Formulir CSRF:**
+- Buat formulir HTML yang melakukan permintaan POST ke endpoint `/my-account/change-email` dengan parameter `email` diisi dengan email penyerang (`attacker@evil.com`).
 
+#### **b. Menghindari Pemblokiran Popup oleh Browser:**
+- Untuk memastikan cookie sesi diperbarui dalam waktu 120 detik, gunakan metode `window.open` yang dipicu oleh interaksi pengguna (misalnya, klik) agar tidak diblokir oleh browser.
+- Implementasikan `window.onclick` untuk membuka tab baru yang menginisialisasi ulang sesi.
 
+#### **c. Mengatur Waktu untuk Mengirimkan Permintaan CSRF:**
+- Setelah membuka tab baru untuk memperbarui sesi, gunakan `setTimeout` untuk mengirimkan formulir CSRF setelah beberapa detik (misalnya, 10 detik) memastikan bahwa sesi telah diperbarui.
 
 ![img](images/SameSite%20Lax%20bypass%20via%20cookie%20refresh/3.png)
-
-
-It is not possible to change the method to GET:
-
-
-
 ![img](images/SameSite%20Lax%20bypass%20via%20cookie%20refresh/4.png)
 
+### **3. Hosting dan Pengujian Payload**
 
-When logging in we get redirected to the subdomain "oauth":
+#### **a. Hosting Payload:**
+- Unggah payload HTML yang telah dibuat ke server eksploitasi yang disediakan.
 
-
+#### **b. Mengujicoba Payload:**
+- Buka halaman eksploitasi, klik di area yang ditentukan untuk memicu `window.open`, yang akan membuka tab baru dan memperbarui sesi.
+- Setelah sesi diperbarui, formulir CSRF akan secara otomatis dikirimkan setelah waktu yang ditentukan, mengubah email korban menjadi `attacker@evil.com`.
 
 ![img](images/SameSite%20Lax%20bypass%20via%20cookie%20refresh/5.png)
 
+### **4. Menyerahkan Payload ke Korban**
 
-This is generated with an url like:
-
-```
-https://oauth-0a6f009504061a2780d1702b026c00f7.oauth-server.net/auth?client_id=erw3xdeohdsu1g89oaqu0&redirect_uri=https://0a72005004831ac38087729700fb0018.web-security-academy.net/oauth-callback&response_type=code&scope=openid%20profile%20email
-```
-
-This request needs some parameters like client_id or it will fail:
-
-
+- **Mengirimkan Link Exploit:**
+  - Kirimkan link halaman eksploitasi kepada korban sehingga ketika mereka mengaksesnya dan berinteraksi (klik), serangan CSRF akan dieksekusi.
 
 ![img](images/SameSite%20Lax%20bypass%20via%20cookie%20refresh/6.png)
 
+## Proof of Concept (PoC)
 
-From the Portswigger we know that “completing an OAuth-based login flow may result in a new session each time as the OAuth service doesn't necessarily know whether the user is still logged in to the target site”, so we must find a way to call this Oauth service, even when we dont know the client id value of the victim user.
+Berikut adalah contoh PoC yang telah dimodifikasi untuk melakukan serangan CSRF dengan membuka `/social-login`, menunggu 10 detik, dan kemudian mengirimkan formulir perubahan email:
 
-Inspecting the requests, it is possible to generate a new session accessing "/social-login" when already logged:
-
-
-
-
-
-![img](images/SameSite%20Lax%20bypass%20via%20cookie%20refresh/7.png)
-![img](images/SameSite%20Lax%20bypass%20via%20cookie%20refresh/8.png)
-
-
-Take the PoC generated by Burp for the POST request to update the email address and add the code so it executes when the victim clicks, so it open /social-login, wait 10 seconds and then submit the form:
-
-```
+```html
 <html>
   <!-- CSRF PoC - generated by Burp Suite Professional -->
   <body>
@@ -96,15 +95,34 @@ Take the PoC generated by Burp for the POST request to update the email address 
       <input type="submit" value="Submit request" />
     </form>
     <script>
-	    window.onclick = () => {
-	        window.open('https://0a72005004831ac38087729700fb0018.web-security-academy.net/social-login');
+        window.onclick = () => {
+            window.open('https://0a72005004831ac38087729700fb0018.web-security-academy.net/social-login');
             setTimeout(submit, 10000);
-			function submit(){			
-				history.pushState('', '', '/');
-		  		document.forms[0].submit();    	
-      		}
-	    }      
+            function submit(){			
+                history.pushState('', '', '/');
+                document.forms[0].submit();    	
+            }
+        }      
     </script>
   </body>
 </html>
 ```
+
+![img](images/SameSite%20Lax%20bypass%20via%20cookie%20refresh/7.png)
+![img](images/SameSite%20Lax%20bypass%20via%20cookie%20refresh/8.png)
+
+### **Penjelasan PoC:**
+- **Formulir CSRF:** Mengirimkan permintaan POST ke endpoint perubahan email dengan nilai email yang diinginkan.
+- **Script:** Ketika pengguna mengklik di halaman, `window.open` membuka tab baru ke `/social-login`, yang akan memperbarui cookie sesi. Setelah 10 detik, formulir CSRF secara otomatis dikirimkan untuk mengubah email korban.
+
+## Poin Penting yang Perlu Diperhatikan
+
+- **Batas Waktu Serangan:** Karena Chrome memberikan jendela waktu 120 detik untuk permintaan POST tingkat atas tanpa atribut `SameSite`, pastikan serangan dilakukan dalam jangka waktu ini.
+  
+- **Interaksi Pengguna Diperlukan:** Untuk menghindari pemblokiran popup oleh browser, pastikan bahwa `window.open` dipicu oleh interaksi pengguna seperti klik.
+  
+- **Keamanan Atribut Cookie:** Dalam skenario nyata, menambahkan atribut `SameSite=Strict` atau `SameSite=Lax` pada cookie sesi dapat membantu mencegah serangan CSRF. Selain itu, menggunakan token CSRF yang unik untuk setiap sesi atau permintaan juga merupakan praktik terbaik.
+
+## Kesimpulan
+
+Lab ini memberikan pemahaman yang baik tentang bagaimana serangan CSRF dapat dieksploitasi ketika aplikasi web tidak menerapkan perlindungan yang memadai seperti atribut `SameSite` pada cookie atau penggunaan token CSRF. Dengan mengikuti langkah-langkah di atas, Anda dapat berhasil melakukan serangan CSRF pada fungsi perubahan email yang rentan dalam lingkungan laboratorium ini.
