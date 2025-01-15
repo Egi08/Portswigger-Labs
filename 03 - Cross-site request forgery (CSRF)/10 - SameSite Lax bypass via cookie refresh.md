@@ -61,8 +61,6 @@ Serangan ini memanfaatkan fakta bahwa aplikasi web tidak memverifikasi asal perm
 #### **c. Mengatur Waktu untuk Mengirimkan Permintaan CSRF:**
 - Setelah membuka tab baru untuk memperbarui sesi, gunakan `setTimeout` untuk mengirimkan formulir CSRF setelah beberapa detik (misalnya, 10 detik) memastikan bahwa sesi telah diperbarui.
 
-![img](images/SameSite%20Lax%20bypass%20via%20cookie%20refresh/3.png)
-![img](images/SameSite%20Lax%20bypass%20via%20cookie%20refresh/4.png)
 
 ### **3. Hosting dan Pengujian Payload**
 
@@ -79,7 +77,6 @@ Serangan ini memanfaatkan fakta bahwa aplikasi web tidak memverifikasi asal perm
 - **Mengirimkan Link Exploit:**
   - Kirimkan link halaman eksploitasi kepada korban sehingga ketika mereka mengaksesnya dan berinteraksi (klik), serangan CSRF akan dieksekusi.
 
-![img](images/SameSite%20Lax%20bypass%20via%20cookie%20refresh/6.png)
 
 ## Proof of Concept (PoC)
 
