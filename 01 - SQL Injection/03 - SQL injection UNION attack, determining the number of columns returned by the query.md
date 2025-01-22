@@ -1,55 +1,53 @@
+### Penjelasan Mengenai Serangan SQL Injection UNION: Menentukan Jumlah Kolom yang Dikembalikan oleh Query
 
-# SQL injection UNION attack, determining the number of columns returned by the query
+Lab ini mengilustrasikan kerentanan SQL injection dalam filter kategori produk. Dengan menggunakan serangan SQL injection UNION, kita dapat mengakses data dari tabel lain. Langkah pertama dalam serangan UNION adalah menentukan jumlah kolom yang dikembalikan oleh query. Setelah itu, kita dapat menggunakan teknik ini dalam lab-lab berikutnya untuk membangun serangan penuh.
 
-This lab contains a SQL injection vulnerability in the product category filter. The results from the query are returned in the application's response, so you can use a UNION attack to retrieve data from other tables. The first step of such an attack is to determine the number of columns that are being returned by the query. You will then use this technique in subsequent labs to construct the full attack.
+Berikut adalah penjelasan tentang bagaimana melakukan serangan SQL injection UNION untuk menentukan jumlah kolom yang dikembalikan oleh query:
 
-To solve the lab, determine the number of columns returned by the query by performing a SQL injection UNION attack that returns an additional row containing null values.
+#### 1. **Memahami Query Asli**  
+   Aplikasi ini menampilkan produk berdasarkan kategori yang dipilih oleh pengguna. Query SQL yang digunakan untuk menampilkan produk mungkin terlihat seperti ini:
 
----------------------------------------------
+   ```sql
+   SELECT name, price FROM products WHERE category = 'Accessories'
+   ```
 
-Reference: https://portswigger.net/web-security/sql-injection/union-attacks
+   Dalam query ini, hanya dua kolom yang dikembalikan: `name` (nama produk) dan `price` (harga produk).
 
----------------------------------------------
+#### 2. **Mendeteksi Kerentanannya**  
+   Kerentanannya terdapat pada bagaimana aplikasi memproses input pengguna tanpa melakukan sanitasi yang tepat, memungkinkan kita untuk menyuntikkan perintah SQL tambahan untuk mengubah hasil query. Dalam hal ini, kita akan melakukan serangan UNION untuk memeriksa jumlah kolom yang dikembalikan oleh query.
 
-We see there are 2 values displayed in the table, the name and the price of the products:
+#### 3. **Langkah Pertama: Mencoba Menyuntikkan Nilai NULL**  
+   Untuk mengidentifikasi jumlah kolom yang dikembalikan oleh query, kita mulai dengan menyuntikkan `NULL` pada bagian parameter query. Jika query menerima nilai `NULL` untuk setiap kolom yang dikembalikan, kita bisa mengetahui berapa banyak kolom yang dikembalikan.
 
+   **Payload yang digunakan:**
+   ```
+   /filter?category=Accessories'+union+select+NULL,NULL,NULL--
+   ```
 
+   Dalam payload ini, kita menambahkan tiga nilai `NULL` untuk menggantikan hasil asli query. Ini memberikan petunjuk mengenai jumlah kolom yang dikembalikan. Jika query menampilkan nilai `NULL` untuk setiap kolom, berarti jumlah kolom yang dikembalikan adalah tiga, bukan dua.
 
-![img](images/SQL%20injection%20UNION%20attack,%20determining%20the%20number%20of%20columns%20returned%20by%20the%20query/1.png)
+   **Hasil:**  
+   Setelah mengirimkan payload ini, kita melihat hasil query dengan tiga kolom (dua kolom asli dan satu kolom tambahan yang kita sisipkan dengan `NULL`).
 
-The following payload is accepted and we see the 4 items from Accessories category:
+   ![Gambar 1](images/SQL%20injection%20UNION%20attack,%20determining%20the%20number%20of%20columns%20returned%20by%20the%20query/3.png)
 
-```
-/filter?category=Accessories'--
-```
+#### 4. **Langkah Kedua: Menyuntikkan Nilai Selain NULL**  
+   Setelah mengetahui jumlah kolom yang dikembalikan, kita dapat melanjutkan dengan menyuntikkan nilai-nilai lain, seperti angka atau string, untuk mengonfirmasi bahwa query dapat menerima berbagai jenis data.
 
+   **Payload yang digunakan:**
+   ```
+   /filter?category=Accessories'+union+all+select+'0','1','2'--
+   ```
 
+   Dalam payload ini, kita mengganti `NULL` dengan nilai `'0'`, `'1'`, dan `'2'`. Ini untuk memastikan bahwa query dapat menangani berbagai jenis data dan mengonfirmasi bahwa kita benar-benar dapat mengeksploitasi query dengan menambahkan kolom ekstra.
 
-![img](images/SQL%20injection%20UNION%20attack,%20determining%20the%20number%20of%20columns%20returned%20by%20the%20query/2.png)
+   **Hasil:**  
+   Dengan menggunakan payload ini, kita dapat melihat data yang kita masukkan dalam bentuk angka (`'0'`, `'1'`, dan `'2'`), yang menunjukkan bahwa kita telah berhasil mengeksploitasi query dan mengonfirmasi jumlah kolom yang dikembalikan.
 
-The same happens with this payload, to display all values:
+   ![Gambar 2](images/SQL%20injection%20UNION%20attack,%20determining%20the%20number%20of%20columns%20returned%20by%20the%20query/4.png)
 
-```
-/filter?category=Accessories'+or+1=1--
-```
+#### 5. **Kesimpulan**  
+   Dengan menggunakan serangan SQL injection UNION ini, kita berhasil menentukan jumlah kolom yang dikembalikan oleh query dan mengeksploitasi kerentanannya untuk mengakses data dari tabel lain. Langkah pertama adalah menyuntikkan `NULL` untuk menentukan jumlah kolom, kemudian menggantinya dengan nilai lain untuk mengonfirmasi hasilnya.
 
-We will update the payload to execute a UNION attack and find the query takes 3 parameters and not 2:
-
-```
-/filter?category=Accessories'+union+select+NULL,NULL,NULL--
-```
-
-
-
-![img](images/SQL%20injection%20UNION%20attack,%20determining%20the%20number%20of%20columns%20returned%20by%20the%20query/3.png)
-
-
-We can also add values instead of using NULL:
-
-```
-/filter?category=Accessories'+union+all+select+'0','1','2'--
-```
-
-
-
-![img](images/SQL%20injection%20UNION%20attack,%20determining%20the%20number%20of%20columns%20returned%20by%20the%20query/4.png)
+### Referensi:
+- [SQL Injection UNION Attack - PortSwigger](https://portswigger.net/web-security/sql-injection/union-attacks)
