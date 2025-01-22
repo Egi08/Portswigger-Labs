@@ -1,50 +1,51 @@
+### Serangan SQL Injection UNION: Mengambil Data dari Tabel Lain
 
-# SQL injection UNION attack, retrieving data from other tables
+Lab ini mengilustrasikan kerentanannya pada filter kategori produk yang memungkinkan serangan SQL injection UNION untuk mengakses data dari tabel lain. Dalam kasus ini, kita akan menggunakan serangan SQL injection UNION untuk menarik data dari tabel `users`, yang berisi kolom `username` dan `password`. Dengan menggabungkan teknik yang telah dipelajari sebelumnya, kita dapat mengeksploitasi kerentanannya untuk memperoleh nama pengguna dan kata sandi, kemudian login sebagai pengguna administrator.
 
-This lab contains a SQL injection vulnerability in the product category filter. The results from the query are returned in the application's response, so you can use a UNION attack to retrieve data from other tables. To construct such an attack, you need to combine some of the techniques you learned in previous labs.
+#### 1. **Memahami Query Asli**  
+   Pada aplikasi ini, produk ditampilkan berdasarkan kategori yang dipilih. Query SQL yang digunakan untuk menampilkan produk kemungkinan berbentuk seperti ini:
 
-The database contains a different table called users, with columns called username and password.
+   ```sql
+   SELECT description, content FROM posts WHERE category = 'Gifts'
+   ```
 
-To solve the lab, perform a SQL injection UNION attack that retrieves all usernames and passwords, and use the information to log in as the administrator user.
+   Query ini mengembalikan dua kolom: `description` (deskripsi) dan `content` (konten) dari postingan produk.
 
----------------------------------------------
+#### 2. **Menentukan Jumlah Kolom yang Dikembalikan**  
+   Untuk mengidentifikasi berapa banyak kolom yang dikembalikan oleh query, kita akan menggunakan serangan SQL injection UNION. Dari percobaan sebelumnya, kita menemukan bahwa query ini mengembalikan dua kolom.
 
-Reference: https://portswigger.net/web-security/sql-injection/union-attacks
+   **Payload yang digunakan untuk memverifikasi jumlah kolom:**
+   ```
+   /filter?category=Gifts'+union+all+select+NULL,NULL--
+   ```
 
----------------------------------------------
+   Dengan menggunakan payload ini, kita bisa memverifikasi bahwa dua kolom dikembalikan dengan menambahkan `NULL` sebagai pengganti data dalam kolom tersebut.
 
-We see there are 2 values displayed in the table, the description and the content of the post:
+   **Hasil:**  
+   Query mengembalikan dua kolom yang kosong, yang berarti query mengembalikan dua kolom.
 
+#### 3. **Mengakses Data dari Tabel Lain dengan UNION Attack**  
+   Setelah mengetahui bahwa query mengembalikan dua kolom, kita bisa melanjutkan untuk mengakses data dari tabel lain, dalam hal ini tabel `users`, yang berisi kolom `username` dan `password`. Dengan menggunakan teknik UNION attack, kita bisa menggabungkan data dari tabel `users` ke dalam hasil query yang sudah ada.
 
+   **Payload yang digunakan untuk mengakses data dari tabel `users`:**
+   ```
+   /filter?category=Gifts'+union+all+select+username,password+from+users--
+   ```
 
+   **Penjelasan Payload:**
+   - `'+union+all+select+username,password+from+users--` adalah payload yang menyuntikkan hasil dari query yang mengakses kolom `username` dan `password` dari tabel `users`.
+   - `--` adalah komentar dalam SQL yang mengabaikan sisa query yang ada setelahnya.
 
-![img](images/SQL%20injection%20UNION%20attack,%20retrieving%20data%20from%20other%20tables/1.png)
+   **Hasil:**  
+   Query akan mengembalikan data dari tabel `users`, seperti nama pengguna dan kata sandi.
 
+   ![Gambar 1](images/SQL%20injection%20UNION%20attack,%20retrieving%20data%20from%20other%20tables/3.png)
 
-We find these payload are valid to display the 4 posts in Gifts and the second all the items:
+#### 4. **Login sebagai Administrator**  
+   Setelah memperoleh nama pengguna dan kata sandi dari tabel `users`, kita dapat menggunakannya untuk login sebagai pengguna administrator dan mengakses aplikasi dengan hak akses penuh.
 
-```
-/filter?category=Gifts'--
-/filter?category=Gifts'+or+1=1--
-```
+#### 5. **Kesimpulan**  
+   Dengan melakukan serangan SQL injection UNION yang mengakses data dari tabel lain, kita dapat menarik informasi penting seperti nama pengguna dan kata sandi yang disimpan dalam tabel `users`. Teknik ini dapat digunakan untuk mengeksploitasi aplikasi yang memiliki kerentanan SQL injection, terutama jika aplikasi tidak memvalidasi input dengan benar dan memungkinkan penggunaan UNION attack.
 
-Also, that there are 2 columns returned by the query and we can do a UNION attack with:
-
-```
-/filter?category=Gifts'+union+all+select+NULL,NULL--
-```
-
-
-
-![img](images/SQL%20injection%20UNION%20attack,%20retrieving%20data%20from%20other%20tables/2.png)
-
-
-Knowing the table and database names we can retrieve the content from users using the payload:
-
-```
-/filter?category=Gifts'+union+all+select+username,password+from+users--
-```
-
-
-
-![img](images/SQL%20injection%20UNION%20attack,%20retrieving%20data%20from%20other%20tables/3.png)
+### Referensi:
+- [SQL Injection UNION Attack - PortSwigger](https://portswigger.net/web-security/sql-injection/union-attacks)
