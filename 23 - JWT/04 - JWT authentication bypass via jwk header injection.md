@@ -1,53 +1,52 @@
+# JWT authentication bypass melalui injeksi header jwk
 
-# JWT authentication bypass via jwk header injection
+Lab ini menggunakan mekanisme berbasis JWT untuk menangani sesi. Server mendukung parameter `jwk` dalam header JWT. Ini kadang-kadang digunakan untuk menyematkan kunci verifikasi yang benar langsung dalam token. Namun, server gagal memeriksa apakah kunci yang diberikan berasal dari sumber yang terpercaya.
 
-This lab uses a JWT-based mechanism for handling sessions. The server supports the jwk parameter in the JWT header. This is sometimes used to embed the correct verification key directly in the token. However, it fails to check whether the provided key came from a trusted source.
+Untuk menyelesaikan lab ini, modifikasi dan tandatangani JWT yang memberi Anda akses ke panel admin di /admin, lalu hapus pengguna carlos.
 
-To solve the lab, modify and sign a JWT that gives you access to the admin panel at /admin, then delete the user carlos.
+Anda dapat masuk ke akun Anda sendiri menggunakan kredensial berikut: wiener:peter
 
-You can log in to your own account using the following credentials: wiener:peter
-
-Tip: We recommend familiarizing yourself with how to work with JWTs in Burp Suite before attempting this lab.
-
+**Tips:** Kami merekomendasikan untuk membiasakan diri dengan cara kerja JWT di Burp Suite sebelum mencoba lab ini.
 
 ---------------------------------------------
 
-References: 
-
-- https://portswigger.net/web-security/jwt
-
-
-
-![img](images/JWT%20authentication%20bypass%20via%20jwk%20header%20injection/1.png)
+**Referensi:**  
+- [JWT Authentication Bypass](https://portswigger.net/web-security/jwt)
 
 ---------------------------------------------
 
-In “JWT Editor Keys”, generate a RSA key:
+### Bukti Konsep (Proof of Concept - POC)
 
+1. **Login dengan akun wiener:peter**  
+   ![image](https://github.com/user-attachments/assets/b3e4811a-e5fb-4212-bbc3-bf798822e454)  
+   Masuk ke aplikasi menggunakan kredensial yang diberikan untuk mendapatkan token sesi awal.
 
+2. **Buka OWASP Penetration Testing Kit**  
+   ![image](https://github.com/user-attachments/assets/1a631c81-ef99-4c49-9a7d-f12454db6ec4)  
+   Gunakan OWASP Penetration Testing Kit atau alat seperti Burp Suite untuk menganalisis dan memodifikasi token JWT.
 
-![img](images/JWT%20authentication%20bypass%20via%20jwk%20header%20injection/2.png)
+3. **Ubah nilai `sub` menjadi `administrator` dan pilih opsi Attack -> Jwk injection (CVE-2018-0114)**  
+   ![image](https://github.com/user-attachments/assets/02954a61-8793-4cf4-9a4c-6fa03a9e79aa)  
+   **Penjelasan:**  
+   Ubah nilai `sub` dalam payload JWT menjadi `administrator` untuk memperoleh hak akses sebagai admin. Pilih opsi Jwk injection untuk menyuntikkan kunci yang dihasilkan ke dalam token.
 
+4. **Pilih algoritma 'RS256', buat pasangan kunci, lalu generate dan salin token yang dihasilkan**  
+   ![image](https://github.com/user-attachments/assets/28e49e8f-86ad-431c-9453-27d11e4f01ff)  
+   Pilih algoritma tanda tangan `RS256`, buat pasangan kunci (public dan private key), lalu gunakan kunci tersebut untuk menghasilkan dan menandatangani ulang token JWT.
 
-In Repeater, in the “JSON Web Token” tab, click “Attack” and “Embedded JWK”:
+5. **Masukkan token tadi pada session0 di cookie, lalu perbarui di semua sumber**  
+   ![image](https://github.com/user-attachments/assets/f6aefb3c-9ffb-4c50-a04b-3c0109372d1b)  
+   Salin token JWT yang telah dimodifikasi dan masukkan ke dalam cookie browser di bagian session0. Setelah itu, perbarui di semua sumber untuk memastikan token baru digunakan.
 
+6. **Muat ulang web untuk menampilkan panel admin**  
+   ![image](https://github.com/user-attachments/assets/de8c14dd-5605-49bf-8407-65e4a1c5b29d)  
+   Setelah token diperbarui, muat ulang halaman. Panel admin sekarang dapat diakses.
 
+7. **Hapus pengguna carlos**  
+   ![image](https://github.com/user-attachments/assets/df2f1ce3-56fc-4e30-8b19-0d464a839ecd)  
+   Masuk ke panel admin, cari opsi untuk menghapus pengguna, dan hapus pengguna dengan nama "carlos."
 
-![img](images/JWT%20authentication%20bypass%20via%20jwk%20header%20injection/3.png)
+---
 
-
-With this added to the JWT, it is possible to access as administrator:
-
-
-
-![img](images/JWT%20authentication%20bypass%20via%20jwk%20header%20injection/4.png)
-
-
-And then delete the user:
-
-```
-GET /admin/delete?username=carlos HTTP/2
-...
-Cookie: session=eyJraWQiOiIzNmRiZGEzNi01NTJjLTQzOGItYWM0Yy05ZTM2NWZiNzhlYzUiLCJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImp3ayI6eyJrdHkiOiJSU0EiLCJlIjoiQVFBQiIsImtpZCI6IjM2ZGJkYTM2LTU1MmMtNDM4Yi1hYzRjLTllMzY1ZmI3OGVjNSIsIm4iOiJ6ZENkb2gxMjBYbnY5Q19VeXd4Slg3OGR0cU95TVM0MmNYZm1ualRZRXVTaGdNZDR5QUJRZVV1T2JpYmlrdXl0ZGFvcGRXMFB0WTFRMkFZT2cwSDZBNGlCYlR6UkhOYU44NUlPYjVKN21naUhIcDdvSWpEbFE2d2FqWnNyYWozVVM0aFgzVGRLM2djRUctaDBFV3BTaDlBMzR5ZnEzSENLTGRFVmJWMFhnUm1JM042TmNfVlg1YUljR2tvQUxIWkJkOWcxNzlDZkJ0dnRVdTNjRlBaQThlQzlpdjV4djFBeU80SWRsT1ZkS2pOZXJuUHU5NEx6enlZbEhPYkhIV2otQmFDNVB4NEowakR5bWRQYzlIYUxtNjdubEEwYXFaNktBNEh3elpIR0pFYjJVT18tWWExSENzUmhybnoyZTJRUlBWQU9IZ1FrUFdNS0piNnZPRlU1T1EifX0.eyJpc3MiOiJwb3J0c3dpZ2dlciIsInN1YiI6ImFkbWluaXN0cmF0b3IiLCJleHAiOjE2ODM3OTE3NTd9.LK85IOFXVB2lZE24KXson0NFXgtiNj4ZZNWsOs1tLij8JRa_AdrANyirsX36vSMooau-OlY-esVixuVbUbYYBWui6fO1Ep5mP4Z1rk2GvtRGuXuaCRj6ksFxnpcRj1yWAJ6xlHEzQAFSYBUDtrQTjfydKg9sx-RFhidoabqYkDVvtVG-NYhiVa4Sjfc0_4Nc98wna3PHKU-ompJReLji53YLqqrIMml9OGSzaUYZ5VLhlhoA2OT5zwOcnnYuXx23-cbsab7Jp5Oc5GDB_bQJU_LRTNFsIoII64aEDOz1AbMlXNX4czGGuQtkyR8HKc-owQ54rJoukIMyU-yGMmYz_g
-...
-```
+**Penjelasan mengapa header `jwk` diubah:**  
+Header `jwk` dalam JWT digunakan untuk menunjukkan lokasi kunci publik yang digunakan untuk memverifikasi tanda tangan JWT. Dalam kasus ini, server gagal memeriksa apakah kunci yang diberikan berasal dari sumber terpercaya, sehingga memungkinkan penyerang untuk menyuntikkan kunci verifikasi mereka sendiri (dalam hal ini, pasangan kunci yang baru dibuat). Dengan mengubah header untuk memasukkan kunci yang kita buat sendiri, kita dapat menandatangani ulang token dengan kunci tersebut, sehingga server menganggap token tersebut valid dan memberikan akses tidak sah ke panel admin. Ini menunjukkan celah keamanan serius dalam cara server memverifikasi tanda tangan JWT.
