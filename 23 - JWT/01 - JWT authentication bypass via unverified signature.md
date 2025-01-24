@@ -1,55 +1,44 @@
+# JWT authentication bypass melalui tanda tangan yang tidak diverifikasi
 
-# JWT authentication bypass via unverified signature
+Lab ini menggunakan mekanisme berbasis JWT untuk menangani sesi. Karena kelemahan implementasi, server tidak memverifikasi tanda tangan dari JWT apa pun yang diterimanya.
 
-This lab uses a JWT-based mechanism for handling sessions. Due to implementation flaws, the server doesn't verify the signature of any JWTs that it receives.
+Untuk menyelesaikan lab ini, modifikasi token sesi Anda untuk mendapatkan akses ke panel admin di /admin, lalu hapus pengguna carlos.
 
-To solve the lab, modify your session token to gain access to the admin panel at /admin, then delete the user carlos.
+Anda dapat masuk ke akun Anda sendiri menggunakan kredensial berikut: wiener:peter
 
-You can log in to your own account using the following credentials: wiener:peter
-
-Tip: We recommend familiarizing yourself with how to work with JWTs in Burp Suite before attempting this lab.
-
----------------------------------------------
-
-References: 
-
-- https://portswigger.net/web-security/jwt
-
-
-
-![img](images/JWT%20authentication%20bypass%20via%20unverified%20signature/1.png)
+**Tips:** Kami merekomendasikan untuk membiasakan diri dengan cara kerja JWT di Burp Suite sebelum mencoba lab ini.
 
 ---------------------------------------------
 
-After logging in we are assigned a JWT:
+**Referensi:**  
+- [JWT Authentication Bypass](https://portswigger.net/web-security/jwt)
 
+---------------------------------------------
 
+### Bukti Konsep (Proof of Concept - POC)
 
-![img](images/JWT%20authentication%20bypass%20via%20unverified%20signature/2.png)
+1. **Login dengan akun wiener:peter**  
+   ![image](https://github.com/user-attachments/assets/b36b4939-9db9-4cb8-814a-d3a9658d87f0)  
+   Masuk ke aplikasi menggunakan kredensial yang diberikan untuk mendapatkan token sesi awal.
 
+2. **Buka OWASP Penetration Testing Kit**  
+   ![image](https://github.com/user-attachments/assets/1a631c81-ef99-4c49-9a7d-f12454db6ec4)  
+   Gunakan OWASP atau alat seperti Burp Suite untuk menganalisis dan memodifikasi token JWT.
 
-We can change this JWT in the JSON Web Token extension panel:
+3. **Ubah nilai `sub` menjadi administrator dan perbarui di semua sumber**  
+   ![image](https://github.com/user-attachments/assets/cd6e57b0-4af7-486f-9cb0-0102811c1ce3)  
+   Ubah payload JWT, khususnya bagian `sub`, dari pengguna asli ke `administrator`. Hal ini dilakukan karena nilai `sub` menunjukkan identitas pengguna. Dengan mengubahnya menjadi `administrator`, Anda mendapatkan hak akses sebagai admin.
 
+4. **Muat ulang web untuk menampilkan panel admin**  
+   ![image](https://github.com/user-attachments/assets/355dca1c-9e5c-4556-b7bb-d741eaa31d18)  
+   Setelah token diperbarui, muat ulang halaman. Panel admin sekarang dapat diakses.
 
+5. **Hapus pengguna carlos**  
+   ![image](https://github.com/user-attachments/assets/98726f29-4261-4f30-ad7d-ea41ae328a03)  
+   ![image](https://github.com/user-attachments/assets/9e41a5e8-66d7-4df6-bc05-24a44951efbf)  
+   Masuk ke panel admin, cari opsi untuk menghapus pengguna, dan hapus pengguna dengan nama "carlos."
 
-![img](images/JWT%20authentication%20bypass%20via%20unverified%20signature/3.png)
+---
 
-
-Getting the JWT:
-
-```
-eyJraWQiOiI0MTZkMDg2Yy00MDdhLTRiYzQtODhhMy00MzAyZTUzMTk1ZTgiLCJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJwb3J0c3dpZ2dlciIsInN1YiI6ImFkbWluaXN0cmF0b3IiLCJleHAiOjE2ODM3ODg2MzR9.qmaz_uqHRR06JTx5vtenCveTPOtzi3mG0X1WMJhnKV3AmzlI3Pjceo3Lldu2oLHcP9SEblyJxJJ5hIO3VVAKzWsWGjNw4aN1vZCBhxzcY-MgxuspBc3XpS1_oMeenFcfEn0I4Jlob_YMrZVqQbdp8i1w_SpYLkMOkDaLlgPZk3TwZa1U005YBhHjQrItMBYWRtQDnP4rYnHkTsgwmWRu8RMCirq9-SS9gczbr2YEENZuPrxWphbYwCSMtivcysFOKXEzCvO7juIKqAfE_WmB6qx41I8Wny-qlkbeU3-9VXyIM8iC6opD6wlUiI9S328bjXN_ZFWsuRdaDVyvE4gRXw
-```
-
-Then I changed the “Location” header to “/admin”:
-
-
-
-![img](images/JWT%20authentication%20bypass%20via%20unverified%20signature/4.png)
-
-
-Getting access to the admin panel:
-
-
-
-![img](images/JWT%20authentication%20bypass%20via%20unverified%20signature/5.png)
+**Penjelasan mengapa `sub` diubah:**  
+Bagian `sub` dalam payload JWT biasanya menunjukkan identitas pengguna. Ketika server tidak memverifikasi tanda tangan JWT, nilai ini dapat diubah untuk mendapatkan hak akses yang lebih tinggi, seperti menjadi administrator. Dengan mengubah `sub` menjadi `administrator`, server akan menganggap Anda sebagai admin tanpa melakukan validasi lebih lanjut. Hal ini menunjukkan celah keamanan serius dalam implementasi JWT di lab ini. 
